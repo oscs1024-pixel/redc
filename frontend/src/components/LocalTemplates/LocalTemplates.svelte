@@ -10,8 +10,11 @@
   // State Management
   // ============================================================================
   
+  // Tab state for template categories
+  let templateTab = $state('all');
+  
   // Local templates list and loading state
-let { t } = $props();
+  let { t } = $props();
   let localTemplates = $state([]);
   let localTemplatesLoading = $state(false);
   let localTemplatesSearch = $state('');
@@ -279,16 +282,43 @@ let { t } = $props();
   // ============================================================================
 
   /**
-   * Filter and sort local templates based on search query
+   * Determine template type based on path and properties
+   */
+  function getTemplateType(tmpl) {
+    const name = tmpl.name || '';
+    
+    if (name.includes('base-templates/')) {
+      return 'custom';
+    }
+    if (name.includes('userdata-templates/')) {
+      return 'userdata';
+    }
+    if (name.includes('compose-templates/')) {
+      return 'compose';
+    }
+    return 'preset';
+  }
+
+  /**
+   * Filter and sort local templates based on search query and selected tab
    * Searches in: name, description, and module fields
    */
   let filteredLocalTemplates = $derived(localTemplates
-    .filter(t => 
-      !localTemplatesSearch || 
-      t.name.toLowerCase().includes(localTemplatesSearch.toLowerCase()) ||
-      (t.description && t.description.toLowerCase().includes(localTemplatesSearch.toLowerCase())) ||
-      (t.module && t.module.toLowerCase().includes(localTemplatesSearch.toLowerCase()))
-    )
+    .filter(t => {
+      // Filter by tab
+      if (templateTab !== 'all') {
+        const type = getTemplateType(t);
+        if (templateTab !== type) return false;
+      }
+      // Filter by search query
+      if (localTemplatesSearch) {
+        const search = localTemplatesSearch.toLowerCase();
+        return t.name.toLowerCase().includes(search) ||
+          (t.description && t.description.toLowerCase().includes(search)) ||
+          (t.module && t.module.toLowerCase().includes(search));
+      }
+      return true;
+    })
     .sort((a, b) => a.name.localeCompare(b.name)));
 
   let allSelected = $derived(filteredLocalTemplates.length > 0 && selectedTemplates.size === filteredLocalTemplates.length);
@@ -342,6 +372,40 @@ let { t } = $props();
         {localTemplatesLoading ? t.loading : t.refresh}
       </button>
     </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 border-b border-gray-200 mb-4">
+    <button
+      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
+      onclick={() => templateTab = 'all'}
+    >
+      {t.allTemplates || '全部'}
+    </button>
+    <button
+      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'preset' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
+      onclick={() => templateTab = 'preset'}
+    >
+      {t.presetTemplates || '预定义模板'}
+    </button>
+    <button
+      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'custom' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
+      onclick={() => templateTab = 'custom'}
+    >
+      {t.customTemplates || '自定义模板'}
+    </button>
+    <button
+      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'userdata' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
+      onclick={() => templateTab = 'userdata'}
+    >
+      {t.userdataTemplates || 'Userdata模板'}
+    </button>
+    <button
+      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'compose' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
+      onclick={() => templateTab = 'compose'}
+    >
+      {t.composeTemplates || 'Compose模板'}
+    </button>
   </div>
 
   {#if localTemplatesLoading}

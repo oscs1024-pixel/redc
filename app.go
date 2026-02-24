@@ -45,6 +45,7 @@ type App struct {
 	customDeploymentService *redc.CustomDeploymentService
 	templateManager         *redc.TemplateManager
 	configStore             *redc.ConfigStore
+	disableRightClick       bool
 }
 
 // NewApp creates a new App application struct
@@ -572,6 +573,24 @@ func (a *App) GetNotificationEnabled() bool {
 		return a.notificationMgr.IsEnabled()
 	}
 	return false
+}
+
+// SetDisableRightClick enables or disables right click
+func (a *App) SetDisableRightClick(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.disableRightClick = enabled
+	return nil
+}
+
+// GetDisableRightClick returns whether right click is disabled
+func (a *App) GetDisableRightClick() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if !a.disableRightClick {
+		return true
+	}
+	return a.disableRightClick
 }
 
 // maskValue returns masked value for display (shows last 4 chars if length > 8)

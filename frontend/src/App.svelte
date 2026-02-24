@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -28,6 +28,7 @@
   let error = $state('');
   let terraformMirror = $state({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] });
   let notificationEnabled = $state(false);
+  let rightClickDisabled = $state(true);
   let debugEnabled = $state(false);
   let isMaximised = $state(false);
   let isWindows = $state(false);
@@ -129,10 +130,12 @@
     const env = await Environment();
     isWindows = env.platform === 'windows';
     
-    // 禁用右键菜单
+    // 注册右键菜单处理
     const handleContextMenu = (e) => {
-      e.preventDefault();
-      return false;
+      if (rightClickDisabled) {
+        e.preventDefault();
+        return false;
+      }
     };
     document.addEventListener('contextmenu', handleContextMenu);
     
@@ -170,12 +173,13 @@
     isLoading = true;
     error = '';
     try {
-      [cases, templates, config, terraformMirror, notificationEnabled] = await Promise.all([
+      [cases, templates, config, terraformMirror, notificationEnabled, rightClickDisabled] = await Promise.all([
         ListCases(),
         ListTemplates(),
         GetConfig(),
         GetTerraformMirrorConfig(),
-        GetNotificationEnabled()
+        GetNotificationEnabled(),
+        GetDisableRightClick()
       ]);
       debugEnabled = !!config.debugEnabled;
       // Refresh dashboard component if it exists
@@ -347,7 +351,7 @@
         <Compose {t} />
 
       {:else if activeTab === 'settings'}
-        <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled />
+        <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:rightClickDisabled />
 
       {:else if activeTab === 'registry'}
         <Registry {t} />

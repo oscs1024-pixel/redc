@@ -1,8 +1,7 @@
 <script>
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick } from '../../../wailsjs/go/main/App.js';
 
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled } from '../../../wailsjs/go/main/App.js';
-
-let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false) } = $props();
+let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', noProxy: '' });
   let proxySaving = $state(false);
   let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } });
@@ -13,6 +12,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let networkCheckError = $state('');
   let debugSaving = $state(false);
   let notificationSaving = $state(false);
+  let rightClickSaving = $state(false);
   
   // Initialize forms when props change
   $effect(() => {
@@ -142,6 +142,19 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       console.error('Failed to toggle notification:', e);
     } finally {
       notificationSaving = false;
+    }
+  }
+
+  async function handleToggleRightClick() {
+    const nextValue = !rightClickDisabled;
+    rightClickSaving = true;
+    try {
+      await SetDisableRightClick(nextValue);
+      rightClickDisabled = nextValue;
+    } catch (e) {
+      console.error('Failed to toggle right click:', e);
+    } finally {
+      rightClickSaving = false;
     }
   }
   
@@ -428,6 +441,30 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
           class:translate-x-6={notificationEnabled}
           class:translate-x-1={!notificationEnabled}
+        ></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 右键菜单 -->
+  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+      <div>
+        <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.disableRightClick}</div>
+        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.disableRightClickDesc}</div>
+      </div>
+      <button
+        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class:bg-emerald-500={rightClickDisabled}
+        class:bg-gray-300={!rightClickDisabled}
+        onclick={handleToggleRightClick}
+        disabled={rightClickSaving}
+        aria-label={rightClickDisabled ? t.enable : t.disable}
+      >
+        <span
+          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+          class:translate-x-6={rightClickDisabled}
+          class:translate-x-1={!rightClickDisabled}
         ></span>
       </button>
     </div>
