@@ -2,6 +2,8 @@ package mod
 
 import (
 	"fmt"
+
+	"red-cloud/mod/gologger"
 )
 
 // DeploymentExecutor 部署执行器
@@ -114,6 +116,9 @@ func (e *DeploymentExecutor) GenerateVariablesFile(config *DeploymentConfig) (st
 	if config == nil {
 		return "", fmt.Errorf("部署配置不能为空")
 	}
+
+	gologger.Debug().Msgf("GenerateVariablesFile: config.Name=%s, config.Provider=%s, config.Region=%s", 
+		config.Name, config.Provider, config.Region)
 
 	// 验证必需字段
 	if config.Provider == "" {

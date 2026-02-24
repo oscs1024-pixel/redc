@@ -272,6 +272,12 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 		Name = RandomName(CaseName)
 	}
 
+	// 将实例名称添加到变量中，传递给 Terraform
+	if vars == nil {
+		vars = make(map[string]string)
+	}
+	vars["instance_name"] = Name
+
 	// 读取模板元数据，获取模块名（如果有）
 	meta, _ := readTemplateMeta(tpPath)
 	moduleName := ""
