@@ -29,17 +29,25 @@ const TmplCaseFile = "case.json"
 const TmplUserdataFile = "userdata"
 const TmplComposeFile = "redc-compose.yaml"
 
+// TemplateType 模板类型枚举
+type TemplateType string
+
+const (
+	TemplateTypePreset   TemplateType = "preset"   // 预定义模板（场景管理使用）
+	TemplateTypeBase     TemplateType = "base"     // 自定义部署模板
+	TemplateTypeUserdata TemplateType = "userdata" // Userdata 模板
+	TemplateTypeCompose  TemplateType = "compose"  // Compose 模板
+)
+
 // RedcTmpl 对应本地 case.json 的结构
 type RedcTmpl struct {
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	User               string `json:"user"`
-	Version            string `json:"version"`
-	RedcModule         string `json:"redc_module"`
-	IsBaseTemplate     bool   `json:"is_base_template"`
-	IsUserdataTemplate bool   `json:"is_userdata_template"`
-	IsComposeTemplate  bool   `json:"is_compose_template"`
-	Path               string `json:"-"`
+	Name         string       `json:"name"`
+	Description  string       `json:"description"`
+	User         string       `json:"user"`
+	Version      string       `json:"version"`
+	RedcModule   string       `json:"redc_module"`
+	TemplateType TemplateType `json:"template"`
+	Path         string       `json:"-"`
 }
 
 // PullOptions 配置项
@@ -445,7 +453,7 @@ func ListLocalTemplates() ([]*RedcTmpl, error) {
 		}
 		t.Path = dirPath
 		// 过滤掉自定义模板、userdata模板和compose模板，只保留预定义场景模板
-		if t.IsBaseTemplate || t.IsUserdataTemplate || t.IsComposeTemplate {
+		if t.TemplateType == TemplateTypeBase || t.TemplateType == TemplateTypeUserdata || t.TemplateType == TemplateTypeCompose {
 			continue
 		}
 		templates = append(templates, t)

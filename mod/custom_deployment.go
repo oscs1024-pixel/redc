@@ -137,7 +137,7 @@ type BaseTemplate struct {
 	Variables   []TemplateVariable `json:"variables"`
 	Provider    string             `json:"provider"`  // 单一云厂商标识（新模板使用）
 	Providers   []string           `json:"providers"` // 支持的云厂商列表（向后兼容）
-	IsBase      bool               `json:"is_base"`
+	TemplateType TemplateType      `json:"template"`
 	User        string             `json:"user"`
 	RedcModule  string             `json:"redc_module,omitempty"`
 }

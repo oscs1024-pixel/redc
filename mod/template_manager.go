@@ -25,14 +25,14 @@ func NewTemplateManager() *TemplateManager {
 
 // caseJSON 用于解析 case.json 文件的结构
 type caseJSON struct {
-	Name               string   `json:"name"`
-	Description        string   `json:"description"`
-	User               string   `json:"user"`
-	Version            string   `json:"version"`
-	RedcModule         string   `json:"redc_module"`
-	IsBaseTemplate     bool     `json:"is_base_template"`
-	Provider           string   `json:"provider"`           // 单一云厂商标识
-	SupportedProviders []string `json:"supported_providers"` // 支持的云厂商列表（向后兼容）
+	Name           string       `json:"name"`
+	Description    string       `json:"description"`
+	User           string       `json:"user"`
+	Version        string       `json:"version"`
+	RedcModule    string       `json:"redc_module"`
+	TemplateType   TemplateType `json:"template"`
+	Provider       string       `json:"provider"`           // 单一云厂商标识
+	SupportedProviders []string  `json:"supported_providers"` // 支持的云厂商列表（向后兼容）
 }
 
 // ScanBaseTemplates 扫描并识别基础模板
@@ -90,7 +90,7 @@ func (m *TemplateManager) IsBaseTemplate(templatePath string) (bool, error) {
 		return false, fmt.Errorf("failed to parse case.json: %w", err)
 	}
 
-	return caseData.IsBaseTemplate, nil
+	return caseData.TemplateType == TemplateTypeBase, nil
 }
 
 // GetTemplateVariables 获取模板变量定义
@@ -159,7 +159,7 @@ func (m *TemplateManager) readBaseTemplateMetadata(templatePath string) (*BaseTe
 		Version:     caseData.Version,
 		User:        caseData.User,
 		RedcModule:  caseData.RedcModule,
-		IsBase:      caseData.IsBaseTemplate,
+		TemplateType: caseData.TemplateType,
 		Provider:    caseData.Provider, // 单一云厂商
 		Providers:   caseData.SupportedProviders, // 支持的云厂商列表（向后兼容）
 		Variables:   variables,
