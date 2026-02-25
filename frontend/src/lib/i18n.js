@@ -1,9 +1,9 @@
 export const i18n = {
   zh: {
     dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成', localTemplates: '本地模板', specialModules: '专项模块',
-    cases: '场景管理',
+    cases: '预定义场景',
     project: '项目', selectProject: '选择项目...', newProject: '新建项目', projectName: '项目名称', createProject: '创建项目', switchProject: '切换项目', currentProject: '当前项目',
-    sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板',
+    sceneManage: '预定义场景', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板',
     // Dashboard specific
     totalScenes: '总场景数', runningScenes: '运行中', stoppedScenes: '已停止', errorScenes: '异常',
     recentScenes: '最近场景', recentActivity: '最近活动', viewAll: '查看全部',
@@ -186,8 +186,8 @@ export const i18n = {
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
-    cases: 'Cases',
-    sceneManage: 'Scene Management', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
+    cases: 'Preset Scenarios',
+    sceneManage: 'Preset Scenarios', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
     // Dashboard specific
     totalScenes: 'Total Scenes', runningScenes: 'Running', stoppedScenes: 'Stopped', errorScenes: 'Error',
     recentScenes: 'Recent Scenes', recentActivity: 'Recent Activity', viewAll: 'View All',

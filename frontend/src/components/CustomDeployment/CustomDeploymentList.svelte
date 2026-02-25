@@ -75,7 +75,7 @@
     'huaweicloud': '华为云'
   };
 
-  // 截断 ID 显示（参考场景管理页面）
+  // 截断 ID 显示（参考预定义场景页面）
   function getShortId(id: string): string {
     return id && id.length > 8 ? id.substring(0, 8) : id;
   }
