@@ -1368,6 +1368,14 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				result.Amount = amount
 				result.Currency = currency
 			}
+		case "ucloud":
+			amount, currency, err := redc.QueryUCloudBalance(conf.Providers.UCloud.PublicKey, conf.Providers.UCloud.PrivateKey, conf.Providers.UCloud.Region)
+			if err != nil {
+				result.Error = err.Error()
+			} else {
+				result.Amount = amount
+				result.Currency = currency
+			}
 		default:
 			result.Error = "不支持的云厂商"
 		}

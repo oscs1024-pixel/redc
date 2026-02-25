@@ -83,7 +83,7 @@
       
       // Load balances
       try {
-        balances = await GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud']);
+        balances = await GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud', 'ucloud']);
       } catch (e) {
         console.error('Failed to load balances:', e);
       }

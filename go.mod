@@ -24,6 +24,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/billing v1.3.42
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.44
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm v1.3.41
+	github.com/ucloud/ucloud-sdk-go v0.22.59
 	github.com/volcengine/volcengine-go-sdk v1.2.10
 	github.com/wailsapp/wails/v2 v2.11.0
 	github.com/zclconf/go-cty v1.16.4
@@ -105,6 +106,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/samber/lo v1.49.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
 	github.com/therootcompany/xz v1.0.1 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
