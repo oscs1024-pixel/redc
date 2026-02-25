@@ -8,7 +8,8 @@
 let { 
     t, 
     activeTab, 
-    lang, 
+    lang,
+    version,
     onTabChange, 
     onToggleLang, 
     onLoadMCPStatus, 
@@ -282,7 +283,7 @@ let {
         onclick={() => onTabChange('about')}
         title={lang === 'zh' ? '关于 RedC' : 'About RedC'}
       >
-        v3.0.0 by WgpSec
+        {version || 'v3.0.1'} by WgpSec
       </button>
       <div class="flex items-center gap-1">
         <button

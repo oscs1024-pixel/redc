@@ -2,7 +2,7 @@
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { onMount } from 'svelte';
   
-  let { t } = $props();
+  let { t, version } = $props();
   
   let changelog = $state([]);
   let loading = $state(true);
@@ -38,7 +38,7 @@
     </div>
     
     <div class="flex items-center gap-3 text-sm text-gray-600 mb-3">
-      <span class="px-3 py-1 bg-gray-100 rounded-full font-medium">v3.0.0</span>
+      <span class="px-3 py-1 bg-gray-100 rounded-full font-medium">{version || 'v3.0.1'}</span>
     </div>
     
     <div class="text-sm text-gray-600">

@@ -300,6 +300,10 @@ func (a *App) GetConfig() ConfigInfo {
 	}
 }
 
+func (a *App) GetVersion() string {
+	return redc.Version
+}
+
 // SaveProxyConfig saves proxy configuration to environment variables
 func (a *App) SaveProxyConfig(httpProxy, httpsProxy, noProxy string) error {
 	// Set environment variables for current process
