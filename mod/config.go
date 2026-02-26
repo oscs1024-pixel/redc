@@ -73,7 +73,7 @@ type Config struct {
 			Region    string `yaml:"region"`
 		} `yaml:"ctyun"`
 		Google struct {
-			Credentials string `yaml:"GOOGLE_CREDENTIALS" env:"GOOGLE_CREDENTIALS"`
+			Credentials string `yaml:"GOOGLE_APPLICATION_CREDENTIALS" env:"GOOGLE_APPLICATION_CREDENTIALS"`
 			Project     string `yaml:"project"`
 			Region      string `yaml:"region"`
 		} `yaml:"google"`

@@ -269,7 +269,7 @@ let { t } = $props();
       privateKey: 'Private Key',
       projectId: 'Project ID',
       region: 'Region',
-      credentials: '凭据 JSON',
+      credentials: '凭据 JSON 路径',
       project: '项目 ID',
       clientId: 'Client ID',
       clientSecret: 'Client Secret',
@@ -325,7 +325,7 @@ let { t } = $props();
   }
 
   function isSecretField(key) {
-    const secrets = ['accessKey', 'secretKey', 'secretId', 'credentials', 'clientId', 'clientSecret', 'subscriptionId', 'tenantId', 'user', 'tenancy', 'fingerprint', 'apiKey'];
+    const secrets = ['accessKey', 'secretKey', 'secretId', 'clientId', 'clientSecret', 'subscriptionId', 'tenantId', 'user', 'tenancy', 'fingerprint', 'apiKey'];
     return secrets.includes(key);
   }
 

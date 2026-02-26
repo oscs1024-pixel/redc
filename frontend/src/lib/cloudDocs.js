@@ -7,7 +7,7 @@ export const cloudDocs = [
   { name: 'Ctyun', nameZh: '天翼云', url: 'https://www.ctyun.cn/document/', color: 'red' },
   { name: 'Vultr', nameZh: 'Vultr', url: 'https://www.vultr.com/api/', color: 'blue' },
   { name: 'AWS', nameZh: 'AWS', url: 'https://docs.aws.amazon.com/', color: 'orange' },
-  { name: 'GCP', nameZh: 'GCP', url: 'https://cloud.google.com/docs', color: 'blue' },
+  { name: 'GCP', nameZh: 'GCP', url: 'https://docs.cloud.google.com/docs/terraform?hl=zh-cn', color: 'blue' },
   { name: 'Azure', nameZh: 'Azure', url: 'https://learn.microsoft.com/en-us/azure/', color: 'blue' },
   { name: 'Oracle', nameZh: 'Oracle', url: 'https://docs.oracle.com/en-us/iaas/Content/devtoolshome.htm', color: 'red' },
   { name: 'Terraform', nameZh: 'Terraform', url: 'https://developer.hashicorp.com/terraform/docs', color: 'purple' },

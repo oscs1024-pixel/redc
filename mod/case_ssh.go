@@ -19,7 +19,7 @@ type InstanceInfo struct {
 }
 
 // GetSSHConfig 统一获取 SSH 连接配置
-// 自动尝试多种常见的 Output Key (兼容 ecs_ip/public_ip, password/ecs_password)
+// 自动尝试多种常见的 Output Key (兼容 ecs_ip/public_ip, password/ecs_password，instance_ip)
 func (c *Case) GetSSHConfig() (*sshutil.SSHConfig, error) {
 	if c == nil {
 		return nil, fmt.Errorf("case instance is nil")
@@ -27,7 +27,7 @@ func (c *Case) GetSSHConfig() (*sshutil.SSHConfig, error) {
 
 	// 1. 尝试获取 IP
 	// 优先顺序: public_ip -> ecs_ip -> ip
-	ipKeys := []string{"public_ip", "ecs_ip", "ip", "main_ip"}
+	ipKeys := []string{"public_ip", "ecs_ip", "ip", "main_ip", "instance_ip"}
 	var ip string
 	var err error
 

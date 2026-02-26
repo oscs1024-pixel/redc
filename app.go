@@ -737,13 +737,11 @@ func (a *App) GetProvidersConfig(customPath string) (ProvidersConfigInfo, error)
 		{
 			Name: "Google Cloud",
 			Fields: map[string]string{
-				"credentials": maskValue(conf.Providers.Google.Credentials),
+				"credentials": conf.Providers.Google.Credentials,
 				"project":     conf.Providers.Google.Project,
 				"region":      conf.Providers.Google.Region,
 			},
-			HasSecrets: map[string]bool{
-				"credentials": conf.Providers.Google.Credentials != "",
-			},
+			HasSecrets: map[string]bool{},
 		},
 		{
 			Name: "Azure",
