@@ -28,6 +28,10 @@ func (w *stderrWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func (w *stderrWriter) String() string {
+	return w.buf.String()
+}
+
 const (
 	// TerraformTimeout is the default timeout for terraform operations
 	TerraformTimeout = 30 * time.Minute
@@ -100,13 +104,17 @@ func NewTerraformExecutor(workingDir string, opts ...TerraformOption) (*Terrafor
 		opt(te)
 	}
 
+	// Create a custom stdout writer that sends output to gologger
+	stdoutCapture := &stderrWriter{buf: &strings.Builder{}}
+
 	// Always set stdout and stderr for better visibility and debugging
-	tf.SetStdout(te.stdout)
-	// 先设置自定义 stderr writer 捕获输出
+	// Use captured writers to ensure output is visible in GUI
+	tf.SetStdout(stdoutCapture)
 	tf.SetStderr(stderrCapture)
 
-	// 保存 stderr writer 的引用以便后续获取
+	// 保存 writer 的引用以便后续获取
 	te.stderr = stderrCapture
+	te.stdout = stdoutCapture
 
 	// Pass all environment variables including proxy settings and provider credentials to terraform subprocess
 	// Always set environment variables to ensure provider credentials are passed to terraform subprocess
@@ -150,9 +158,33 @@ func NewTerraformExecutor(workingDir string, opts ...TerraformOption) (*Terrafor
 	return te, nil
 }
 
+// logCapturedOutput outputs captured terraform stdout/stderr to gologger
+func (te *TerraformExecutor) logCapturedOutput() {
+	if te.stdout != nil {
+		if sw, ok := te.stdout.(*stderrWriter); ok && sw.buf.Len() > 0 {
+			output := sw.buf.String()
+			if strings.TrimSpace(output) != "" {
+				gologger.Info().Msg(output)
+			}
+		}
+	}
+	if te.stderr != nil {
+		if sw, ok := te.stderr.(*stderrWriter); ok && sw.buf.Len() > 0 {
+			output := sw.buf.String()
+			if strings.TrimSpace(output) != "" {
+				gologger.Info().Msg(output)
+			}
+		}
+	}
+}
+
 // Init runs terraform init with upgrade option
 func (te *TerraformExecutor) Init(ctx context.Context) error {
-	return te.tf.Init(ctx, tfexec.Upgrade(false))
+	err := te.tf.Init(ctx, tfexec.Upgrade(false))
+	if err == nil {
+		te.logCapturedOutput()
+	}
+	return err
 }
 
 // Apply runs terraform apply (auto-approve is the default behavior in terraform-exec)

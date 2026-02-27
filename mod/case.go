@@ -329,7 +329,7 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 
 	// 构建场景
 	if err := c.TfPlan(); err != nil {
-		gologger.Debug().Msgf("场景创建校验失败！%s", err.Error())
+		gologger.Error().Msgf("场景创建校验失败！%s", err.Error())
 		c.Remove()
 		return nil, err
 	}

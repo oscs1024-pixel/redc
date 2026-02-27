@@ -1,7 +1,8 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile } from '../../../wailsjs/go/main/App.js';
+  import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import SSHModal from './SSHModal.svelte';
   import ScheduleDialog from './ScheduleDialog.svelte';
   import ScheduledTasksManager from './ScheduledTasksManager.svelte';
@@ -52,10 +53,57 @@ let { t, onTabChange = () => {} } = $props();
   let createStatusDetail = $state('');
   let createStatusTimer = null;
   
+  // Computed: check if we have persistent error
+  let hasPersistentError = $derived(!!getPersistentError());
+  
+  // Track current AI analysis key (survives error dismissal)
+  let currentAIKey = $state(null);
+  
+  // Persistent error that survives refreshes - use window object for global access
+  // @ts-ignore
+  window.__persistentError = window.__persistentError || null;
+  let persistentError = $state(null);
+  
+  // Sync persistentError from window on mount and periodically
+  $effect(() => {
+    // @ts-ignore
+    persistentError = window.__persistentError;
+  });
+  
+  // Function to get persistent error
+  function getPersistentError() {
+    return persistentError;
+  }
+  
+  // Function to set persistent error
+  function setPersistentError(err) {
+    window.__persistentError = err;
+    persistentError = err;
+  }
+  
+  // Function to dismiss persistent error
+  function dismissPersistentError() {
+    console.log('[Cases] Dismissing error');
+    setPersistentError(null);
+    createStatus = 'idle';
+    createStatusMessage = '';
+    createStatusDetail = '';
+    showErrorDetail = false;
+    console.log('[Cases] After dismiss, getPersistentError():', getPersistentError());
+  }
+  
   // Terraform init hint
   let terraformInitHint = $state({ show: false, message: '', detail: '' });
   let terraformInitHintDismissed = false;
   let terraformInitHintLastDetail = '';
+
+  // AI Error Analysis state
+  let aiAnalyzing = $state({});
+  let aiAnalysisResult = $state({});
+  let aiAnalysisCompleted = $state({});
+  
+  // Error display state
+  let showErrorDetail = $state(false);
   
   let copiedKey = $state(null);
   let copiedAllKey = $state(null);
@@ -84,6 +132,31 @@ let { t, onTabChange = () => {} } = $props();
   
   onMount(async () => {
     await refresh();
+    
+    // 设置 AI 分析事件监听
+    EventsOn('ai-case-error-chunk', (data) => {
+      console.log('[AI] Received chunk:', data);
+      const { caseId, chunk } = data;
+      if (caseId && chunk) {
+        aiAnalysisResult[caseId] = (aiAnalysisResult[caseId] || '') + chunk;
+        aiAnalysisResult = { ...aiAnalysisResult };
+        console.log('[AI] Updated result for:', caseId);
+      }
+    });
+    
+    EventsOn('ai-case-error-complete', (data) => {
+      console.log('[AI] Received complete:', data);
+      const { caseId, success } = data;
+      if (caseId) {
+        aiAnalyzing[caseId] = false;
+        aiAnalyzing = { ...aiAnalyzing };
+        aiAnalysisCompleted[caseId] = true;
+        aiAnalysisCompleted = { ...aiAnalysisCompleted };
+        if (!success) {
+          console.error('AI analysis failed for case:', caseId);
+        }
+      }
+    });
   });
   
   onDestroy(() => {
@@ -103,6 +176,15 @@ let { t, onTabChange = () => {} } = $props();
   }
   
   function setCreateStatus(status, message, detail = '') {
+    // Save error to persistent storage when error occurs
+    if (status === 'error') {
+      setPersistentError({ message, detail });
+    }
+    
+    // If already showing error, don't overwrite it unless it's a new operation
+    if (createStatus === 'error' && status !== 'creating' && status !== 'initializing') {
+      return;
+    }
     createStatus = status;
     createStatusMessage = message || '';
     createStatusDetail = detail || '';
@@ -110,6 +192,8 @@ let { t, onTabChange = () => {} } = $props();
       clearTimeout(createStatusTimer);
       createStatusTimer = null;
     }
+    // Error status should stay until user dismisses it or starts a new operation
+    // Only auto-clear success status after 3 seconds
     if (status === 'success') {
       createStatusTimer = setTimeout(() => {
         createStatus = 'idle';
@@ -137,7 +221,87 @@ let { t, onTabChange = () => {} } = $props();
     terraformInitHintDismissed = true;
   }
   
+  // 从模板名称提取云服务商
+  function getProviderFromTemplate(templateName) {
+    if (!templateName) return 'unknown';
+    const parts = templateName.split('/');
+    if (parts.length >= 1) {
+      const provider = parts[0].toLowerCase();
+      const providerMap = {
+        'aliyun': 'alicloud',
+        'tencent': 'tencentcloud',
+        'aws': 'aws',
+        'huawei': 'huaweicloud',
+        'ucloud': 'ucloud',
+        'volcengine': 'volcengine',
+        'gcp': 'gcp',
+        'ctyun': 'ctyun'
+      };
+      return providerMap[provider] || provider;
+    }
+    return 'unknown';
+  }
+  
+  // AI 分析错误
+  async function handleAIAnalysis() {
+    const errorMessage = getPersistentError()?.detail || createStatusDetail;
+    if (!errorMessage) {
+      alert('没有错误信息可以分析');
+      return;
+    }
+    
+    // 尝试从错误信息中提取模板名称
+    let templateName = selectedTemplate || newCaseName;
+    if (!templateName) {
+      // 从错误详情中提取模板名称
+      const match = errorMessage.match(/模板:\s*(\S+)/);
+      if (match) {
+        templateName = match[1];
+      }
+    }
+    
+    // 先检查 AI 配置
+    try {
+      const profile = await GetActiveProfile();
+      if (!profile || !profile.aiConfig || !profile.aiConfig.apiKey) {
+        alert('请先在设置中配置 AI 服务');
+        return;
+      }
+    } catch (err) {
+      alert(`检查 AI 配置失败: ${err.message || err}`);
+      return;
+    }
+    
+    // 使用场景名称作为标识
+    const caseId = newCaseName || templateName || 'unknown';
+    
+    // 保存当前 AI key，这样关闭错误后仍能看到分析结果
+    currentAIKey = caseId;
+    
+    // 开始 AI 分析
+    aiAnalyzing[caseId] = true;
+    aiAnalyzing = { ...aiAnalyzing };
+    aiAnalysisResult[caseId] = '';
+    aiAnalysisResult = { ...aiAnalysisResult };
+    
+    try {
+      await AnalyzeCaseError(caseId, errorMessage, getProviderFromTemplate(templateName), templateName);
+    } catch (err) {
+      alert(`AI 分析失败: ${err.message || err}`);
+      aiAnalyzing[caseId] = false;
+      aiAnalyzing = { ...aiAnalyzing };
+    }
+  }
+  
   export async function refresh() {
+    // Don't refresh if there's an error status - it will clear the error message
+    if (createStatus === 'error') {
+      return;
+    }
+    // Also don't refresh if currently creating/initializing - that would also clear status
+    if (createStatus === 'creating' || createStatus === 'initializing') {
+      return;
+    }
     try {
       [cases, templates] = await Promise.all([
         ListCases(),
@@ -165,7 +329,7 @@ let { t, onTabChange = () => {} } = $props();
     }
     if (cleanMessage.includes('场景创建成功')) {
       setCreateStatus('success', t.createSuccess, message);
-      refresh();
+      setTimeout(() => refresh(), 500);
       return;
     }
     if (cleanMessage.includes('场景创建失败') || cleanMessage.includes('创建场景时发生错误')) {
@@ -684,17 +848,69 @@ let { t, onTabChange = () => {} } = $props();
       </div>
     {/if}
 
-    {#if createStatus !== 'idle'}
-      <div class="mt-3 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-[12px]">
+    <!-- Show persistent error or current create status -->
+    {#if createStatus !== 'idle' || getPersistentError()}
+      {@const hasError = createStatus === 'error' || !!getPersistentError()}
+      <div class="mt-3 rounded-lg border {hasError ? 'border-red-200 bg-red-50' : createStatus === 'success' ? 'border-emerald-200 bg-emerald-50' : 'border-gray-100 bg-gray-50'} px-3 py-2 text-[12px] relative">
         {#if createStatus === 'creating' || createStatus === 'initializing'}
-          <div class="w-3.5 h-3.5 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
-          <span class="text-gray-700">{createStatusMessage}</span>
+          <div class="flex items-center gap-2">
+            <div class="w-3.5 h-3.5 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
+            <span class="text-gray-700">{createStatusMessage}</span>
+          </div>
         {:else if createStatus === 'success'}
           <span class="text-emerald-600">{createStatusMessage}</span>
-        {:else if createStatus === 'error'}
-          <span class="text-red-600">{createStatusMessage}</span>
+        {:else if hasError}
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div class="flex-1">
+              <h4 class="text-[13px] font-semibold text-red-900">场景创建失败</h4>
+              <p class="text-[12px] text-red-700 mt-1">请检查配置后重试。错误详情：</p>
+              {#if (getPersistentError()?.detail || createStatusDetail)}
+                <pre class="mt-2 p-3 bg-white rounded border border-red-200 text-[11px] text-red-800 overflow-x-auto whitespace-pre-wrap max-h-48">{getPersistentError()?.detail || createStatusDetail}</pre>
+              {/if}
+              <!-- AI Analysis -->
+              {#if currentAIKey && (aiAnalyzing[currentAIKey] || aiAnalysisCompleted[currentAIKey])}
+                <div class="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                  {#if aiAnalyzing[currentAIKey]}
+                    <div class="flex items-center gap-2">
+                      <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span class="text-[12px] text-blue-700">AI 正在分析错误...</span>
+                    </div>
+                  {/if}
+                  {#if aiAnalysisResult[currentAIKey]}
+                    <pre class="text-[11px] text-blue-800 whitespace-pre-wrap">{aiAnalysisResult[currentAIKey]}</pre>
+                  {/if}
+                </div>
+              {:else}
+                <button 
+                  class="mt-3 px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+                  onclick={handleAIAnalysis}
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  AI 分析错误原因
+                </button>
+              {/if}
+            </div>
+            <!-- 关闭按钮 -->
+            <button 
+              class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"
+              onclick={dismissPersistentError}
+              title="关闭"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         {/if}
-        {#if createStatusDetail}
+        {#if createStatus !== 'error' && createStatusDetail}
           <span class="text-gray-400 truncate">{createStatusDetail}</span>
         {/if}
       </div>

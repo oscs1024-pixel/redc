@@ -43,7 +43,7 @@ func TfInit(Path string) error {
 // TfInit2 复制模版后再尝试初始化
 func TfInit2(Path string) error {
 	if err := TfInit(Path); err != nil {
-		gologger.Debug().Msgf("初始化失败！: %v", err)
+		gologger.Error().Msgf("初始化失败！: %v", err)
 		// 无法初始化,删除 case 文件夹
 		if removeErr := os.RemoveAll(Path); removeErr != nil {
 			gologger.Error().Msgf("删除文件夹失败: %v", removeErr)
@@ -70,7 +70,7 @@ func TfPlan(Path string, opts ...string) error {
 	o = append(o, tfexec.Out(RedcPlanPath))
 	err = te.Plan(ctx, o...)
 	if err != nil {
-		gologger.Debug().Msgf("场景创建失败: %v", err)
+		gologger.Error().Msgf("场景创建失败: %v", err)
 		return err
 	}
 	err = te.ShowPlan(ctx)
@@ -97,7 +97,7 @@ func TfApply(Path string, opts ...string) error {
 	
 	err = te.Apply(ctx, o...)
 	if err != nil {
-		gologger.Debug().Msgf("场景启动失败: %s", err.Error())
+		gologger.Error().Msgf("场景启动失败: %s", err.Error())
 		// 返回更详细的错误信息，包含 Terraform 的实际错误输出
 		return fmt.Errorf("Terraform apply 失败: %w", err)
 	}

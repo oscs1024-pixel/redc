@@ -191,10 +191,6 @@
       ]);
       rightClickDisabledSync = rightClickDisabled;
       debugEnabled = !!config.debugEnabled;
-      // Refresh dashboard component if it exists
-      if (dashboardComponent && dashboardComponent.refresh) {
-        await dashboardComponent.refresh();
-      }
     } catch (e) {
       error = e.message || String(e);
       cases = [];

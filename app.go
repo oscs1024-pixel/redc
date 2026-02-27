@@ -2777,6 +2777,76 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 	return nil
 }
 
+// AnalyzeCaseError uses AI to analyze case (predefined scenario) creation errors and provide solutions
+func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName string) error {
+	gologger.Info().Msgf("开始 AI 分析场景错误: caseName=%s, provider=%s, template=%s", caseName, provider, templateName)
+
+	// Get active profile and AI config
+	profile, err := redc.GetActiveProfile()
+	if err != nil || profile.AIConfig == nil {
+		gologger.Error().Msgf("AI 配置获取失败: %v", err)
+		return fmt.Errorf("请先配置 AI 服务")
+	}
+
+	aiConfig := profile.AIConfig
+	if aiConfig.APIKey == "" || aiConfig.BaseURL == "" || aiConfig.Model == "" {
+		return fmt.Errorf("AI 配置不完整，请检查 API Key、Base URL 和 Model")
+	}
+
+	// Create AI client
+	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
+
+	// Prepare system prompt for error analysis
+	systemPrompt := `你是一个云资源部署专家助手。用户会提供一个部署失败的错误信息，你需要分析错误原因并提供解决方案。
+
+请分析以下部署错误：
+
+- 云服务商: ` + provider + `
+- 模板名称: ` + templateName + `
+- 场景名称: ` + caseName + `
+- 错误信息:
+` + errorMessage + `
+
+请按以下格式回复：
+1. 错误原因分析
+2. 解决方案建议
+3. 如果需要，提供修正后的配置示例
+
+注意：请用中文回复，因为用户使用中文。`
+
+	messages := []ai.Message{
+		{Role: "system", Content: systemPrompt},
+	}
+
+	// Stream response to frontend with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	err = client.ChatStream(ctx, messages, func(chunk string) error {
+		// Emit chunk to frontend
+		runtime.EventsEmit(a.ctx, "ai-case-error-chunk", map[string]interface{}{
+			"caseId": caseName,
+			"chunk":  chunk,
+		})
+		return nil
+	})
+
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "ai-case-error-complete", map[string]interface{}{
+			"caseId":  caseName,
+			"success": false,
+		})
+		return fmt.Errorf("AI 分析失败: %v", err)
+	}
+
+	// Emit completion event
+	runtime.EventsEmit(a.ctx, "ai-case-error-complete", map[string]interface{}{
+		"caseId":  caseName,
+		"success": true,
+	})
+	return nil
+}
+
 // CopyTemplate creates an editable local copy of a template
 func (a *App) CopyTemplate(sourceName string, targetName string) error {
 	if err := redc.CopyTemplate(sourceName, targetName); err != nil {
