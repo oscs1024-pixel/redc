@@ -1,6 +1,14 @@
 {
   "changelog": [
     {
+      "version": "3.0.5",
+      "date": "2025-02-28",
+      "changes": [
+        "优化：修复 GitHub Actions CI/CD 构建问题",
+        "新增：预定义场景页面无模板时引导提示"
+      ]
+    },
+    {
       "version": "3.0.4",
       "date": "2025-02-27",
       "changes": [

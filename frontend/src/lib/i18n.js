@@ -62,6 +62,8 @@ export const i18n = {
     profileNameRequired: 'Profile 名称不能为空',
     profileCredentialsFrom: '凭据读取自', profileTemplateFrom: '模板目录来自', profileSwitchHint: '切换 Profile 会同时切换凭据与模板目录',
     selectTemplateErr: '请选择一个模板',
+    noTemplatesHint: '暂无模板，请先从"模板仓库"页面下载模板',
+    noTemplatesHintButton: '前往模板仓库',
     // Local templates i18n
     version: '版本', author: '作者', module: '模块', description: '描述', viewParams: '查看参数',
     cloneTemplate: '复制模板',
@@ -248,6 +250,8 @@ export const i18n = {
     profileNameRequired: 'Profile name is required',
     profileCredentialsFrom: 'Credentials loaded from', profileTemplateFrom: 'Template directory from', profileSwitchHint: 'Switching profile will change credentials and template directory',
     selectTemplateErr: 'Please select a template',
+    noTemplatesHint: 'No templates available. Please download templates from the "Template Registry" page first',
+    noTemplatesHintButton: 'Go to Template Registry',
     // Local templates i18n
     version: 'Version', author: 'Author', module: 'Module', description: 'Description', viewParams: 'View Params',
     cloneTemplate: 'Clone',

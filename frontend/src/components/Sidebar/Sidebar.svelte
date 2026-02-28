@@ -284,7 +284,7 @@ let {
         onclick={() => { if (onCheckUpdate) onCheckUpdate(); onTabChange('about'); }}
         title={lang === 'zh' ? '关于 RedC，点击检查更新' : 'About RedC, click to check for updates'}
       >
-        {version || 'v3.0.1'} by WgpSec
+        {version || 'v3.0.5'} by WgpSec
       </button>
       <div class="flex items-center gap-1">
         <button

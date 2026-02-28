@@ -12,6 +12,7 @@
 **/*.jar
 .idea
 .kiro
+.trae
 dist/
 out
 redc-taskresult
