@@ -28,7 +28,7 @@
   <!-- Header -->
   <div class="bg-white rounded-xl border border-gray-100 p-8 mb-6">
     <div class="flex items-center gap-4 mb-6">
-      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center shadow-lg">
+      <div class="w-16 h-16 rounded-lg bg-rose-600 flex items-center justify-center border border-rose-700">
         <span class="text-white text-3xl font-bold">C</span>
       </div>
       <div>
@@ -213,7 +213,7 @@
         onclick={() => openLink('https://redc.wgpsec.org')}
       >
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center">
+          <div class="w-10 h-10 rounded-lg bg-rose-600 flex items-center justify-center">
             <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>

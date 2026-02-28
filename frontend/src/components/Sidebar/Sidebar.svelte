@@ -165,7 +165,7 @@ let {
   <div class="h-14 flex items-center px-4 border-b border-gray-100 {leftPadding}" style="--wails-draggable:drag">
     <div class="flex items-center gap-0.5">
       <span class="text-[14px] font-semibold text-gray-900">Red</span>
-      <div class="w-6 h-6 rounded-md bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center">
+      <div class="w-6 h-6 rounded-md bg-rose-600 flex items-center justify-center">
         <span class="text-white text-[13px] font-bold">C</span>
       </div>
     </div>
@@ -208,7 +208,7 @@ let {
       </button>
 
       {#if showProjectDropdown}
-        <div class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+        <div class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-lg border border-gray-200 max-h-48 overflow-y-auto z-50">
           {#if isLoadingProjects}
             <div class="px-3 py-2 text-[11px] text-gray-500">{lang === 'zh' ? '加载中...' : 'Loading...'}</div>
           {:else if projects.length === 0}
@@ -248,7 +248,7 @@ let {
   <!-- New Project Modal -->
   {#if showNewProjectModal}
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-4 w-64 shadow-xl">
+      <div class="bg-white rounded-lg p-4 w-64 border border-gray-200">
         <h3 class="text-[13px] font-medium text-gray-900 mb-3">{lang === 'zh' ? '新建项目' : 'New Project'}</h3>
         <input
           type="text"

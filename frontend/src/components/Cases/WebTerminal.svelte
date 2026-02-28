@@ -219,11 +219,11 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={handleBackdropClick}>
-  <div class="bg-gray-900 rounded-xl shadow-xl w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
+  <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+        <div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center">
           <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
           </svg>

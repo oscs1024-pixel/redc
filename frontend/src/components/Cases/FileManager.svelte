@@ -206,7 +206,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={handleBackdropClick}>
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl h-[85vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
+  <div class="bg-white rounded-xl border border-gray-200 w-full max-w-6xl h-[85vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-3">
@@ -434,7 +434,7 @@
 {#if showNewFolderDialog}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onclick={() => showNewFolderDialog = false}>
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-white rounded-xl border border-gray-200 w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
       <h3 class="text-[14px] font-semibold text-gray-900 mb-4">{t.newFolder || '新建文件夹'}</h3>
       <!-- svelte-ignore a11y_autofocus -->
       <input
@@ -468,7 +468,7 @@
 {#if showRenameDialog}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onclick={() => showRenameDialog = false}>
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-white rounded-xl border border-gray-200 w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
       <h3 class="text-[14px] font-semibold text-gray-900 mb-4">{t.rename || '重命名'}</h3>
       <!-- svelte-ignore a11y_autofocus -->
       <input
@@ -502,7 +502,7 @@
 {#if showDeleteConfirm}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onclick={() => showDeleteConfirm = false}>
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-white rounded-xl border border-gray-200 w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
       <h3 class="text-[14px] font-semibold text-gray-900 mb-2">{t.confirmDelete || '确认删除'}</h3>
       <p class="text-[12px] text-gray-600 mb-4">
         {t.deleteConfirmMessage || '确定要删除'} <span class="font-medium text-gray-900">{deleteTarget?.name}</span> {t.questionMark || '吗？'}

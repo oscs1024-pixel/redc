@@ -103,7 +103,7 @@
 {#if show}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick={handleCancel}>
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-white rounded-lg border border-gray-200 max-w-md w-full mx-4" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <h3 class="text-[15px] font-semibold text-gray-900">
