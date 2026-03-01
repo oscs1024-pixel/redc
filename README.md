@@ -92,6 +92,9 @@ wails build
 
 # windows
 wails build -platform windows/amd64
+
+# linux
+wails build -platform linux/amd64
 ```
 
 Artifacts are output to [build/bin](build/bin).

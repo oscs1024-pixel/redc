@@ -92,6 +92,9 @@ wails build
 
 # windows
 wails build -platform windows/amd64
+
+# linux
+wails build -platform linux/amd64
 ```
 
 构建产物输出到 [build/bin](build/bin)。
