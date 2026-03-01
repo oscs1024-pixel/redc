@@ -174,7 +174,7 @@ jobs:
           path: build/bin/redc-gui-linux-amd64.tar.gz
 
   build-linux-arm64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -189,10 +189,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Linux dependencies (arm64)
+      - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config
 
       - name: Get npm cache directory
         id: npm-cache-dir
@@ -202,9 +202,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          key: ${{ runner.os }}-arm64-npm-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-npm-
+            ${{ runner.os }}-arm64-npm-
 
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -218,9 +218,6 @@ jobs:
         run: wails build -platform linux/arm64 -tags webkit2_41
         env:
           CGO_ENABLED: 1
-          CC: aarch64-linux-gnu-gcc
-          CXX: aarch64-linux-gnu-g++
-          GOARCH: arm64
 
       - name: Package as tar.gz
         run: |
