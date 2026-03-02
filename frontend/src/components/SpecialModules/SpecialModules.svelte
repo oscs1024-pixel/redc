@@ -163,13 +163,13 @@
               class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all {copied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}"
               onclick={copyToClipboard}
             >
-              {copied ? '已复制!' : '复制脚本'}
+              {copied ? (t.copiedSuccess || '已复制!') : (t.copyScript || '复制脚本')}
             </button>
           </div>
           {#if selectedVulhubScenario.level}
             <div class="mb-2">
               <span class="inline-block px-2 py-0.5 text-[11px] font-medium rounded {selectedVulhubScenario.level === 'critical' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}">
-                {selectedVulhubScenario.level === 'critical' ? '严重' : '高危'}
+                {selectedVulhubScenario.level === 'critical' ? (t.severityCritical || '严重') : (t.severityHigh || '高危')}
               </span>
             </div>
           {/if}
@@ -291,7 +291,7 @@
               class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all {copied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}"
               onclick={copyToClipboard}
             >
-              {copied ? '已复制!' : '复制脚本'}
+              {copied ? (t.copiedSuccess || '已复制!') : (t.copyScript || '复制脚本')}
             </button>
           </div>
           {#if selectedAIScenario.description}

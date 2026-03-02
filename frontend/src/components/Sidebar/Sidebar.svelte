@@ -93,14 +93,14 @@ let {
       window.location.reload();
     } catch (err) {
       console.error('Failed to switch project:', err);
-      alert('切换项目失败: ' + err.message);
+      alert((t.switchProjectFailed || '切换项目失败') + ': ' + err.message);
     }
   }
 
   // Create a new project
   async function handleCreateProject() {
     if (!newProjectName.trim()) {
-      alert('请输入项目名称');
+      alert(t.pleaseEnterProjectName || '请输入项目名称');
       return;
     }
     try {
@@ -112,7 +112,7 @@ let {
       await handleSwitchProject(newProjectName.trim());
     } catch (err) {
       console.error('Failed to create project:', err);
-      alert('创建项目失败: ' + err.message);
+      alert((t.createProjectFailed || '创建项目失败') + ': ' + err.message);
     }
   }
   
@@ -196,12 +196,12 @@ let {
         class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
           bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100 cursor-pointer"
         onclick={() => showProjectDropdown = !showProjectDropdown}
-        title={lang === 'zh' ? '切换项目' : 'Switch Project'}
+        title={t.switchProject || '切换项目'}
       >
         <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
         </svg>
-        <span class="flex-1 text-left truncate">{currentProject || (lang === 'zh' ? '选择项目...' : 'Select Project...')}</span>
+        <span class="flex-1 text-left truncate">{currentProject || (t.selectProject || '选择项目...')}</span>
         <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
         </svg>
@@ -210,9 +210,9 @@ let {
       {#if showProjectDropdown}
         <div class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-lg border border-gray-200 max-h-48 overflow-y-auto z-50">
           {#if isLoadingProjects}
-            <div class="px-3 py-2 text-[11px] text-gray-500">{lang === 'zh' ? '加载中...' : 'Loading...'}</div>
+            <div class="px-3 py-2 text-[11px] text-gray-500">{t.loadingProjects || '加载中...'}</div>
           {:else if projects.length === 0}
-            <div class="px-3 py-2 text-[11px] text-gray-500">{lang === 'zh' ? '暂无项目' : 'No projects'}</div>
+            <div class="px-3 py-2 text-[11px] text-gray-500">{t.noProjects || '暂无项目'}</div>
           {:else}
             {#each projects as project}
               <button
@@ -238,7 +238,7 @@ let {
             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            {lang === 'zh' ? '新建项目' : 'New Project'}
+            {t.newProject || '新建项目'}
           </button>
         </div>
       {/if}
@@ -249,11 +249,11 @@ let {
   {#if showNewProjectModal}
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible">
       <div class="bg-white rounded-lg p-4 w-64 border border-gray-200">
-        <h3 class="text-[13px] font-medium text-gray-900 mb-3">{lang === 'zh' ? '新建项目' : 'New Project'}</h3>
+        <h3 class="text-[13px] font-medium text-gray-900 mb-3">{t.newProject || '新建项目'}</h3>
         <input
           type="text"
           bind:value={newProjectName}
-          placeholder={lang === 'zh' ? '输入项目名称...' : 'Enter project name...'}
+          placeholder={t.enterProjectName || '输入项目名称...'}
           class="w-full px-3 py-2 text-[12px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
           onkeydown={(e) => e.key === 'Enter' && handleCreateProject()}
         />
@@ -262,14 +262,14 @@ let {
             class="px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
             onclick={() => { showNewProjectModal = false; newProjectName = ''; }}
           >
-            {lang === 'zh' ? '取消' : 'Cancel'}
+            {t.cancel || '取消'}
           </button>
           <button
             class="px-3 py-1.5 text-[11px] bg-rose-600 text-white hover:bg-rose-700 rounded transition-colors disabled:opacity-50 cursor-pointer"
             onclick={handleCreateProject}
             disabled={!newProjectName.trim()}
           >
-            {lang === 'zh' ? '创建' : 'Create'}
+            {t.create || '创建'}
           </button>
         </div>
       </div>
@@ -282,7 +282,7 @@ let {
       <button
         class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors whitespace-nowrap cursor-pointer"
         onclick={() => { if (onCheckUpdate) onCheckUpdate(); onTabChange('about'); }}
-        title={lang === 'zh' ? '关于 RedC，点击检查更新' : 'About RedC, click to check for updates'}
+        title={t.aboutRedC || '关于 RedC，点击检查更新'}
       >
         {version || 'v3.0.5'} by WgpSec
       </button>
@@ -290,8 +290,8 @@ let {
         <button
           class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium cursor-pointer"
           onclick={onToggleLang}
-          title={lang === 'zh' ? 'Switch to English' : '切换到中文'}
-        >{lang === 'zh' ? 'EN' : '中'}</button>
+          title={t.switchLanguage || '切换语言'}
+        >{lang === 'zh' ? (t.langEn || 'EN') : (t.langZh || '中')}</button>
         <button
           class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
           onclick={openGitHub}

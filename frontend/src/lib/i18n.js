@@ -3,6 +3,8 @@ export const i18n = {
     dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成', localTemplates: '本地模板', specialModules: '专项模块',
     cases: '预定义场景',
     project: '项目', selectProject: '选择项目...', newProject: '新建项目', projectName: '项目名称', createProject: '创建项目', switchProject: '切换项目', currentProject: '当前项目',
+    loadingProjects: '加载中...', noProjects: '暂无项目', enterProjectName: '输入项目名称...',
+    switchProjectFailed: '切换项目失败', createProjectFailed: '创建项目失败', pleaseEnterProjectName: '请输入项目名称',
     sceneManage: '预定义场景', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板',
     // Dashboard specific
     totalScenes: '总场景数', runningScenes: '运行中', stoppedScenes: '已停止', errorScenes: '异常',
@@ -176,7 +178,8 @@ export const i18n = {
     applySuggestion: '应用建议', priorityHigh: '高', priorityMedium: '中', priorityLow: '低',
     noDescription: '暂无描述',
     // About page
-    about: '关于', developedBy: '开发者', aboutIntro: '项目简介',
+    about: '关于', developedBy: '开发者', aboutIntro: '项目简介', aboutRedC: '关于 RedC，点击检查更新',
+    switchLanguage: '切换语言', langEn: 'EN', langZh: '中',
     aboutDesc1: 'RedC 是一个专为红队设计的云基础设施管理平台，旨在简化和自动化红队在云环境中的基础设施部署和管理工作。',
     aboutDesc2: '通过 RedC，您可以快速部署各种红队场景，包括 C2 服务器、钓鱼平台、漏洞环境等，支持多云平台（阿里云、腾讯云、华为云、火山云等）。',
     aboutDesc3: 'RedC 基于 Terraform 构建，提供了友好的图形界面，让您无需深入了解 Terraform 语法即可轻松管理云基础设施。',
@@ -201,7 +204,8 @@ export const i18n = {
     aiAnalyzeError: 'AI 分析错误原因',
     outputInfo: '输出信息',
     copyAll: '复制全部',
-    copied: '已复制',
+    copied: '已复制', copyScript: '复制脚本', copiedSuccess: '已复制!',
+    severityCritical: '严重', severityHigh: '高危',
     experimentalFeatureDesc: '自定义部署功能目前处于实验阶段，可能存在不稳定情况。请谨慎使用于生产环境。',
     all: '全部', baseTemplates: '基础模板', predefinedTemplates: '预定义模板',
     deselectAll: '取消全选', selectedCount: '已选择 {count} 项',
@@ -240,6 +244,9 @@ export const i18n = {
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
     cases: 'Preset Scenarios',
+    project: 'Project', selectProject: 'Select Project...', newProject: 'New Project', projectName: 'Project Name', createProject: 'Create Project', switchProject: 'Switch Project', currentProject: 'Current Project',
+    loadingProjects: 'Loading...', noProjects: 'No projects', enterProjectName: 'Enter project name...',
+    switchProjectFailed: 'Failed to switch project', createProjectFailed: 'Failed to create project', pleaseEnterProjectName: 'Please enter project name',
     sceneManage: 'Preset Scenarios', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
     // Dashboard specific
     totalScenes: 'Total Scenes', runningScenes: 'Running', stoppedScenes: 'Stopped', errorScenes: 'Error',
@@ -267,7 +274,8 @@ export const i18n = {
     running: 'Running', stopped: 'Stopped', error: 'Error', created: 'Created',
     pending: 'Pending', starting: 'Starting', stopping: 'Stopping', removing: 'Removing',
     processing: 'Processing', loadingOutputs: 'Loading outputs...', 
-    copied: 'Copied', copy: 'Copy', terminal: 'Terminal', clear: 'Clear', waitOutput: 'Waiting for output...',
+    copied: 'Copied', copyScript: 'Copy Script', copiedSuccess: 'Copied!',
+    severityCritical: 'Critical', severityHigh: 'High',
     redcPath: 'RedC Path', projectPath: 'Project Path', logPath: 'Log Path',
     proxyConfig: 'Proxy Configuration', httpProxy: 'HTTP Proxy', httpsProxy: 'HTTPS Proxy', socks5Proxy: 'SOCKS5 Proxy', noProxyLabel: 'No Proxy Addresses (NO_PROXY)',
     saving: 'Saving...', saveProxy: 'Save Proxy Config', proxyHint: 'Used for Terraform network requests',
@@ -419,7 +427,8 @@ export const i18n = {
     applySuggestion: 'Apply', priorityHigh: 'High', priorityMedium: 'Medium', priorityLow: 'Low',
     noDescription: 'No description',
     // About page
-    about: 'About', developedBy: 'Developed by', aboutIntro: 'Introduction',
+    about: 'About', developedBy: 'Developed by', aboutIntro: 'Introduction', aboutRedC: 'About RedC, click to check for updates',
+    switchLanguage: 'Switch Language', langEn: 'EN', langZh: '中',
     aboutDesc1: 'RedC is a cloud infrastructure management platform designed for red teams, aiming to simplify and automate infrastructure deployment and management in cloud environments.',
     aboutDesc2: 'With RedC, you can quickly deploy various red team scenarios, including C2 servers, phishing platforms, vulnerability environments, etc., supporting multiple cloud platforms (Alibaba Cloud, Tencent Cloud, Huawei Cloud, Volcengine, etc.).',
     aboutDesc3: 'RedC is built on Terraform and provides a friendly graphical interface, allowing you to easily manage cloud infrastructure without deep knowledge of Terraform syntax.',
