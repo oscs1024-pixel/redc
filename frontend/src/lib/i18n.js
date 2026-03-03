@@ -80,6 +80,8 @@ export const i18n = {
     welcomeFeature3: '本地模板管理', welcomeFeature3Desc: '支持自定义模板，满足个性化需求',
     welcomeWindowsIssue: 'Windows 控制台窗口说明', welcomeWindowsIssueTitle: 'Windows 用户请注意', welcomeWindowsIssueDesc: '在 Windows 系统中，当父进程没有控制台时，通过 exec.Command 创建的子进程会生成新的控制台窗口。该问题已在 terraform-exec 库中提交 issue 等待修复。',
     welcomeDontShow: '下次不显示', welcomeGotIt: '知道了', welcomeNext: '下一步', welcomePrev: '上一步',
+    welcomeProxyTitle: '代理配置说明', welcomeProxyDesc: '由于中国地区网络环境原因，建议在设置中配置代理以提高云厂商 API 连接速度',
+    welcomeProxyWhere: '在哪里配置：', welcomeProxyPath: '设置 → 代理配置', welcomeProxyEffect: '配置后将用于 Terraform 的网络请求和模板下载',
     // Batch operations
     selected: '已选择', items: '项', clearSelection: '清除选择', selectAll: '全选',
     batchStart: '批量启动', batchStop: '批量停止', batchDelete: '批量删除',
@@ -341,6 +343,8 @@ export const i18n = {
     welcomeFeature3: 'Local Template Management', welcomeFeature3Desc: 'Support for custom templates to meet personalized needs',
     welcomeWindowsIssue: 'Windows Console Window Notice', welcomeWindowsIssueTitle: 'Attention Windows Users', welcomeWindowsIssueDesc: 'In Windows, when the parent process has no console, child processes created via exec.Command will generate a new console window. This issue has been submitted to the terraform-exec library as an issue awaiting fix.',
     welcomeDontShow: "Don't show again", welcomeGotIt: 'Got it', welcomeNext: 'Next', welcomePrev: 'Previous',
+    welcomeProxyTitle: 'Proxy Configuration', welcomeProxyDesc: 'Due to network environment issues in China, it is recommended to configure a proxy to improve cloud provider API connection speed',
+    welcomeProxyWhere: 'Where to configure:', welcomeProxyPath: 'Settings → Proxy Configuration', welcomeProxyEffect: 'The configuration will be used for Terraform network requests and template downloads',
     // Batch operations
     selected: 'Selected', items: 'items', clearSelection: 'Clear selection', selectAll: 'Select All',
     deselectAll: 'Deselect All', selectedCount: '{count} selected',

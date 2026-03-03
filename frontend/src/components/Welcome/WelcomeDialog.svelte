@@ -25,11 +25,19 @@
   }
 
   function nextPage() {
-    currentPage = 1;
+    if (currentPage === 0) {
+      currentPage = 1;
+    } else if (currentPage === 1) {
+      currentPage = 2;
+    }
   }
 
   function prevPage() {
-    currentPage = 0;
+    if (currentPage === 1) {
+      currentPage = 0;
+    } else if (currentPage === 2) {
+      currentPage = 1;
+    }
   }
 </script>
 
@@ -49,7 +57,7 @@
       <!-- Header -->
       <div class="px-5 py-4 border-b border-gray-100">
         <h2 class="text-[15px] font-medium text-gray-900">
-          {currentPage === 0 ? (t.welcomeTitle || '欢迎使用 RedC') : (t.welcomeWindowsIssue || 'Windows 控制台窗口说明')}
+          {currentPage === 0 ? (t.welcomeTitle || '欢迎使用 RedC') : currentPage === 1 ? (t.welcomeWindowsIssue || 'Windows 控制台窗口说明') : (t.welcomeProxyTitle || '代理配置说明')}
         </h2>
       </div>
       
@@ -95,6 +103,31 @@
             </div>
           </div>
         </div>
+      {:else if currentPage === 2}
+        <!-- Content - Page 2: Proxy Config -->
+        <div class="px-5 py-4 space-y-3">
+          <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
+            <div class="flex gap-3">
+              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-[13px] font-medium text-blue-800">{t.welcomeProxyTitle || '代理配置说明'}</h3>
+                <p class="text-[12px] text-blue-700 mt-1">{t.welcomeProxyDesc || '由于中国大陆网络环境原因，建议配置代理以提高云厂商 API 连接速度'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-[12px] text-gray-500">{t.welcomeProxyWhere || '在哪里配置：'}</p>
+            <ul class="text-[12px] text-gray-600 space-y-1 list-disc list-inside">
+              <li>{t.welcomeProxyPath || '设置 → 代理配置'}</li>
+              <li>{t.welcomeProxyEffect || '配置后将用于 Terraform 的网络请求和模板下载'}</li>
+            </ul>
+          </div>
+        </div>
       {:else}
         <!-- Content - Page 1: Windows Issue -->
         <div class="px-5 py-4">
@@ -131,7 +164,20 @@
           >
             {t.welcomeNext || '下一步'}
           </button>
-        {:else}
+        {:else if currentPage === 1}
+          <button
+            class="h-9 px-4 text-gray-700 bg-white border border-gray-300 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            onclick={prevPage}
+          >
+            {t.welcomePrev || '上一步'}
+          </button>
+          <button
+            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            onclick={nextPage}
+          >
+            {t.welcomeNext || '下一步'}
+          </button>
+        {:else if currentPage === 2}
           <button
             class="h-9 px-4 text-gray-700 bg-white border border-gray-300 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors"
             onclick={prevPage}
