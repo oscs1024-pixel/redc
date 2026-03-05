@@ -109,21 +109,23 @@
       } catch (e) {
         console.error('Failed to load balances:', e);
       }
-      
-      // Load bills
-      try {
-        billsLoading = true;
-        bills = await GetBills(['aws', 'vultr']);
-      } catch (e) {
-        console.error('Failed to load bills:', e);
-        bills = [];
-      } finally {
-        billsLoading = false;
-      }
     } catch (e) {
       console.error('Failed to load dashboard data:', e);
     } finally {
       loading = false;
+    }
+  }
+  
+  async function queryBills() {
+    billsLoading = true;
+    bills = [];
+    try {
+      bills = await GetBills(['aws', 'vultr']);
+    } catch (e) {
+      console.error('Failed to load bills:', e);
+      bills = [];
+    } finally {
+      billsLoading = false;
     }
   }
   
@@ -388,8 +390,15 @@
     
     <!-- Current Month Bill -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{t.currentMonthBill || '当月账单'}</h3>
+        <button 
+          onclick={queryBills}
+          disabled={billsLoading}
+          class="h-7 px-2.5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[10px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {billsLoading ? (t.loading || '加载中...') : (t.queryBill || '查询')}
+        </button>
       </div>
       <div class="p-5">
         {#if billsLoading}
@@ -397,8 +406,9 @@
             {t.loading || '加载中...'}
           </div>
         {:else if bills.length === 0}
-          <div class="text-center py-8 text-[13px] text-gray-400">
-            {t.noBalanceData || '暂无账单数据'}
+          <div class="text-center py-4 text-[13px] text-gray-400">
+            <div>{t.clickToQueryBill || '点击上方按钮查询当月账单'}</div>
+            <div class="mt-2 text-[11px] text-amber-500">{t.billCostWarning || 'AWS Cost Explorer USE1-APIRequest 调用每次约 $0.01'}</div>
           </div>
         {:else}
           <div class="space-y-3">
