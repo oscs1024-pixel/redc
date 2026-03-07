@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-json"
@@ -495,6 +494,27 @@ func addModuleResources(counts map[string]int, module *tfjson.StateModule) {
 	}
 }
 
+func getProviderDisplayName(provider string) string {
+	switch provider {
+	case "aliyun":
+		return "阿里云"
+	case "tencentcloud":
+		return "腾讯云"
+	case "volcengine":
+		return "火山引擎"
+	case "huaweicloud":
+		return "华为云"
+	case "ucloud":
+		return "UCloud"
+	case "vultr":
+		return "Vultr"
+	case "aws":
+		return "AWS"
+	default:
+		return provider
+	}
+}
+
 func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 	if len(providers) == 0 {
 		providers = []string{"aliyun", "tencentcloud", "volcengine", "huaweicloud", "ucloud", "vultr", "aws"}
@@ -517,18 +537,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					errMsg := fmt.Sprintf("%v", r)
 					logMsg := fmt.Sprintf("[GetBalances] recovered from panic for provider %s: %v", p, r)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					if strings.Contains(errMsg, "APIGW.0301") ||
-						strings.Contains(errMsg, "Unauthorized") ||
-						strings.Contains(errMsg, "failed to get domain id") ||
-						strings.Contains(errMsg, "domain id") {
-						result.Error = "华为云查询报错，请至控制台查看详情"
-					} else {
-						result.Error = fmt.Sprintf("查询出错: %v", r)
-					}
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				}
 			}()
 
@@ -539,7 +551,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryAliyunBalance(conf.Providers.Alicloud.AccessKey, conf.Providers.Alicloud.SecretKey, conf.Providers.Alicloud.Region)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -551,7 +566,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryTencentBalance(conf.Providers.Tencentcloud.SecretId, conf.Providers.Tencentcloud.SecretKey, conf.Providers.Tencentcloud.Region)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -563,7 +581,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryVolcengineBalance(conf.Providers.Volcengine.AccessKey, conf.Providers.Volcengine.SecretKey, conf.Providers.Volcengine.Region)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -575,7 +596,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryHuaweiBalance(conf.Providers.Huaweicloud.AccessKey, conf.Providers.Huaweicloud.SecretKey, conf.Providers.Huaweicloud.Region)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -587,7 +611,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryUCloudBalance(conf.Providers.UCloud.PublicKey, conf.Providers.UCloud.PrivateKey, conf.Providers.UCloud.Region)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -599,7 +626,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryVultrBalance(conf.Providers.Vultr.ApiKey)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -611,7 +641,10 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			} else {
 				amount, currency, err := redc.QueryAWSBill(conf.Providers.Aws.AccessKey, conf.Providers.Aws.SecretKey, conf.Providers.Aws.Region)
 				if err != nil {
-					result.Error = err.Error()
+					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
