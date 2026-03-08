@@ -167,6 +167,7 @@ export const i18n = {
     sshCreateHint: '点击下方按钮或从场景页面打开 SSH 终端', sshDisplayName: '显示名称 (可选)', sshDisplayNamePlaceholder: '在标签页中显示的名称',
     sshCaseIdPlaceholder: '输入场景或部署 ID', sshNoForwards: '暂无活跃的端口转发', sshAllFieldsRequired: '请填写所有字段', sshCurrentSession: '当前会话',
     execUserdata: '命令片段', noTemplates: '暂无可用模板', scriptPreview: '脚本预览', uploading: '上传中...', uploadAndExec: '上传并执行', loading: '加载中...',
+    sendToAI: '发送到 AI 分析', analyzeTerminalPrompt: '请帮我分析以下终端输出内容',
     // Scheduled Tasks
     execSuccess: '执行成功', execFailed: '执行失败',
     uploadFile: '上传文件', downloadFile: '下载文件',
@@ -463,6 +464,7 @@ export const i18n = {
     sshCreateHint: 'Click the button below or open SSH from a scenario page', sshDisplayName: 'Display Name (optional)', sshDisplayNamePlaceholder: 'Name shown in tab',
     sshCaseIdPlaceholder: 'Enter case or deployment ID', sshNoForwards: 'No active port forwards', sshAllFieldsRequired: 'All fields are required', sshCurrentSession: 'Current session',
     loading: 'Loading...',
+    sendToAI: 'Send to AI Analysis', analyzeTerminalPrompt: 'Please help me analyze the following terminal output',
     // Scheduled Tasks
     execSuccess: 'Exec Success', execFailed: 'Exec Failed',
     uploadFile: 'Upload File', downloadFile: 'Download File',

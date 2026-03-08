@@ -221,9 +221,21 @@
       }
     });
 
+    // Check for pending terminal text from SSH Manager
+    checkPendingTerminalText();
+
+    // Listen for future sends (when user switches back to AI Chat tab)
+    const handleStorage = (e) => {
+      if (e.key === 'ai-chat-pending-terminal' && e.newValue) {
+        checkPendingTerminalText();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
     return () => {
       EventsOff('ai-chat-chunk');
       EventsOff('ai-chat-complete');
+      window.removeEventListener('storage', handleStorage);
     };
   });
 
@@ -256,6 +268,25 @@
     isStreaming = false;
     error = '';
     currentConversationId = '';
+  }
+
+  // Check for pending terminal text from SSH Manager
+  function checkPendingTerminalText() {
+    try {
+      const pending = localStorage.getItem('ai-chat-pending-terminal');
+      if (pending) {
+        localStorage.removeItem('ai-chat-pending-terminal');
+        // Switch to free mode for terminal analysis
+        if (mode !== 'free') {
+          mode = 'free';
+          activeConvId = generateId();
+          messages = [getWelcomeMessage('free')];
+        }
+        // Pre-fill input with the terminal content wrapped in a prompt
+        const prompt = (t.analyzeTerminalPrompt || '请帮我分析以下终端输出内容') + ':\n```\n' + pending + '\n```';
+        inputText = prompt;
+      }
+    } catch (_) {}
   }
 
   // Send message
