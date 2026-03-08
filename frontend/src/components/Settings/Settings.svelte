@@ -190,34 +190,37 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   }
 </script>
 
-<div class="w-full max-w-xl mx-auto space-y-4">
+<div class="w-full max-w-2xl mx-auto space-y-4">
   <!-- 基本信息 -->
-  <div class="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
-    <div class="px-4 sm:px-5 py-3 sm:py-4">
-      <div class="text-[11px] sm:text-[12px] font-medium text-gray-500 mb-1">{t.redcPath}</div>
-      <div class="text-[12px] sm:text-[13px] text-gray-900 font-mono break-all">{config.redcPath || '-'}</div>
-    </div>
-    <div class="px-4 sm:px-5 py-3 sm:py-4">
-      <div class="text-[11px] sm:text-[12px] font-medium text-gray-500 mb-1">{t.projectPath}</div>
-      <div class="text-[12px] sm:text-[13px] text-gray-900 font-mono break-all">{config.projectPath || '-'}</div>
-    </div>
-    <div class="px-4 sm:px-5 py-3 sm:py-4">
-      <div class="text-[11px] sm:text-[12px] font-medium text-gray-500 mb-1">{t.logPath}</div>
-      <div class="text-[12px] sm:text-[13px] text-gray-900 font-mono break-all">{config.logPath || '-'}</div>
+  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+    <div class="text-[13px] sm:text-[14px] font-medium text-gray-900 mb-3">{t.redcPath?.replace('路径', '') || '基本信息'}</div>
+    <div class="space-y-2">
+      <div class="flex items-start gap-3">
+        <span class="text-[11px] sm:text-[12px] text-gray-500 w-20 flex-shrink-0 pt-0.5">{t.redcPath}</span>
+        <span class="text-[12px] sm:text-[13px] text-gray-900 font-mono break-all">{config.redcPath || '-'}</span>
+      </div>
+      <div class="flex items-start gap-3">
+        <span class="text-[11px] sm:text-[12px] text-gray-500 w-20 flex-shrink-0 pt-0.5">{t.projectPath}</span>
+        <span class="text-[12px] sm:text-[13px] text-gray-900 font-mono break-all">{config.projectPath || '-'}</span>
+      </div>
+      <div class="flex items-start gap-3">
+        <span class="text-[11px] sm:text-[12px] text-gray-500 w-20 flex-shrink-0 pt-0.5">{t.logPath}</span>
+        <span class="text-[12px] sm:text-[13px] text-gray-900 font-mono break-all">{config.logPath || '-'}</span>
+      </div>
     </div>
   </div>
 
   <!-- 代理配置 -->
   <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
     <div class="text-[13px] sm:text-[14px] font-medium text-gray-900 mb-4">{t.proxyConfig}</div>
-    <div class="space-y-3 sm:space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
       <div>
         <label for="httpProxy" class="block text-[11px] sm:text-[12px] font-medium text-gray-500 mb-1.5">{t.httpProxy}</label>
         <input 
           id="httpProxy"
           type="text" 
           placeholder="http://127.0.0.1:7890" 
-          class="w-full h-9 sm:h-10 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+          class="w-full h-9 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
           bind:value={proxyForm.httpProxy} 
         />
       </div>
@@ -227,7 +230,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           id="httpsProxy"
           type="text" 
           placeholder="http://127.0.0.1:7890" 
-          class="w-full h-9 sm:h-10 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+          class="w-full h-9 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
           bind:value={proxyForm.httpsProxy} 
         />
       </div>
@@ -237,7 +240,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           id="socks5Proxy"
           type="text" 
           placeholder="socks5://127.0.0.1:1080" 
-          class="w-full h-9 sm:h-10 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+          class="w-full h-9 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
           bind:value={proxyForm.socks5Proxy} 
         />
       </div>
@@ -247,20 +250,20 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           id="noProxy"
           type="text" 
           placeholder="localhost,127.0.0.1,.local" 
-          class="w-full h-9 sm:h-10 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+          class="w-full h-9 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
           bind:value={proxyForm.noProxy} 
         />
       </div>
-      <div class="pt-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
-        <button 
-          class="h-9 sm:h-10 px-4 sm:px-5 bg-emerald-500 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          onclick={handleSaveProxy}
-          disabled={proxySaving}
-        >
-          {proxySaving ? t.saving : t.saveProxy}
-        </button>
-        <span class="ml-0 sm:ml-3 text-[11px] sm:text-[12px] text-gray-500">{t.proxyHint}</span>
-      </div>
+    </div>
+    <div class="mt-4 flex items-center gap-3">
+      <button 
+        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        onclick={handleSaveProxy}
+        disabled={proxySaving}
+      >
+        {proxySaving ? t.saving : t.saveProxy}
+      </button>
+      <span class="text-[11px] sm:text-[12px] text-gray-500">{t.proxyHint}</span>
     </div>
   </div>
 
@@ -410,74 +413,60 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
     {/if}
   </div>
 
-  <!-- 调试日志 -->
-  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+  <!-- 通用设置（调试/通知/右键） -->
+  <div class="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
+    <!-- 调试日志 -->
+    <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">
       <div>
         <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.debugLogs}</div>
-        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.debugLogsDesc}</div>
+        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.debugLogsDesc}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={debugEnabled}
         class:bg-gray-300={!debugEnabled}
         onclick={handleToggleDebug}
         disabled={debugSaving}
         aria-label={debugEnabled ? t.disable : t.enable}
       >
-        <span
-          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-          class:translate-x-6={debugEnabled}
-          class:translate-x-1={!debugEnabled}
-        ></span>
+        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+          class:translate-x-6={debugEnabled} class:translate-x-1={!debugEnabled}></span>
       </button>
     </div>
-  </div>
-
-  <!-- 系统通知 -->
-  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+    <!-- 系统通知 -->
+    <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">
       <div>
         <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.systemNotification}</div>
-        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.systemNotificationDesc}</div>
+        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.systemNotificationDesc}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={notificationEnabled}
         class:bg-gray-300={!notificationEnabled}
         onclick={handleToggleNotification}
         disabled={notificationSaving}
         aria-label={notificationEnabled ? t.disable : t.enable}
       >
-        <span
-          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-          class:translate-x-6={notificationEnabled}
-          class:translate-x-1={!notificationEnabled}
-        ></span>
+        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+          class:translate-x-6={notificationEnabled} class:translate-x-1={!notificationEnabled}></span>
       </button>
     </div>
-  </div>
-
-  <!-- 右键菜单 -->
-  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+    <!-- 右键菜单 -->
+    <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">
       <div>
         <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.disableRightClick}</div>
-        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.disableRightClickDesc}</div>
+        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.disableRightClickDesc}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={rightClickDisabled}
         class:bg-gray-300={!rightClickDisabled}
         onclick={handleToggleRightClick}
         disabled={rightClickSaving}
         aria-label={rightClickDisabled ? t.enable : t.disable}
       >
-        <span
-          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-          class:translate-x-6={rightClickDisabled}
-          class:translate-x-1={!rightClickDisabled}
-        ></span>
+        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+          class:translate-x-6={rightClickDisabled} class:translate-x-1={!rightClickDisabled}></span>
       </button>
     </div>
   </div>
