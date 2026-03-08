@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { StartSSHTerminal, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, UploadUserdataScript } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { StartSSHTerminal, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import FileManager from '../Cases/FileManager.svelte';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
@@ -13,6 +13,9 @@
   let showNewSessionDialog = $state(false);
   let newSessionCaseId = $state('');
   let newSessionCaseName = $state('');
+  let availableCases = $state([]);
+  let casesLoading = $state(false);
+  let showManualInput = $state(false);
 
   // --- Right panel state: 'none' | 'portForward' | 'userdata' | 'fileManager' ---
   let rightPanel = $state('none');
@@ -274,6 +277,26 @@
     }
   }
 
+  async function openNewSessionDialog() {
+    showNewSessionDialog = true;
+    showManualInput = false;
+    newSessionCaseId = '';
+    newSessionCaseName = '';
+    casesLoading = true;
+    try {
+      const cases = await ListCases();
+      availableCases = (cases || []).filter(c => c.state === 'running');
+    } catch {
+      availableCases = [];
+    }
+    casesLoading = false;
+  }
+
+  function selectCase(c) {
+    createSession(c.id, c.name || c.id);
+    showNewSessionDialog = false;
+  }
+
   function handleNewSessionSubmit() {
     const caseId = newSessionCaseId.trim();
     if (!caseId) return;
@@ -428,7 +451,7 @@
         <!-- New session button -->
         <button
           class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0 cursor-pointer"
-          onclick={() => showNewSessionDialog = true}
+          onclick={openNewSessionDialog}
           title={t.sshNewSession || '新建会话'}
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -495,7 +518,7 @@
               <p class="text-gray-400 text-[12px] mb-4">{t.sshCreateHint || '点击下方按钮或从场景页面打开 SSH 终端'}</p>
               <button
                 class="h-10 px-5 bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium rounded-lg transition-colors cursor-pointer"
-                onclick={() => showNewSessionDialog = true}
+                onclick={openNewSessionDialog}
               >
                 {t.sshNewSession || '新建会话'}
               </button>
@@ -718,45 +741,101 @@
     onclick={(e) => { if (e.target === e.currentTarget) showNewSessionDialog = false; }}
     onkeydown={(e) => { if (e.key === 'Escape') showNewSessionDialog = false; }}
   >
-    <div class="bg-white rounded-xl border border-gray-100 w-full max-w-sm p-5 shadow-2xl">
+    <div class="bg-white rounded-xl border border-gray-100 w-full max-w-md p-5 shadow-2xl">
       <h3 class="text-[15px] font-semibold text-gray-900 mb-4">{t.sshNewSession || '新建会话'}</h3>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshCaseId || '场景/部署 ID'}</label>
-          <input
-            type="text"
-            class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
-            placeholder={t.sshCaseIdPlaceholder || '输入场景或部署 ID'}
-            bind:value={newSessionCaseId}
-            onkeydown={(e) => { if (e.key === 'Enter') handleNewSessionSubmit(); }}
-          />
+
+      {#if !showManualInput}
+        <!-- Active cases list -->
+        <div class="mb-4">
+          <label class="block text-[12px] font-medium text-gray-700 mb-2">{t.sshActiveCases || '运行中的场景'}</label>
+          {#if casesLoading}
+            <div class="flex items-center justify-center py-6 text-gray-400 text-[13px]">
+              <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              {t.loading || '加载中...'}
+            </div>
+          {:else if availableCases.length === 0}
+            <div class="text-center py-4 text-gray-400 text-[13px]">{t.sshNoCasesRunning || '暂无运行中的场景'}</div>
+          {:else}
+            <div class="max-h-60 overflow-y-auto space-y-1">
+              {#each availableCases as c}
+                <button
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors cursor-pointer group"
+                  onclick={() => selectCase(c)}
+                >
+                  <span class="flex-shrink-0 w-2 h-2 rounded-full bg-green-500"></span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[13px] font-medium text-gray-900 truncate">{c.name || c.id.substring(0, 16)}</div>
+                    <div class="text-[11px] text-gray-400 truncate font-mono">{c.id.substring(0, 24)}...</div>
+                  </div>
+                  <span class="text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">{c.type === 'predefined' ? (t.predefined || '预定义') : (t.custom || '自定义')}</span>
+                  <svg class="w-4 h-4 text-gray-300 group-hover:text-red-500 flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              {/each}
+            </div>
+          {/if}
         </div>
-        <div>
-          <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshDisplayName || '显示名称 (可选)'}</label>
-          <input
-            type="text"
-            class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
-            placeholder={t.sshDisplayNamePlaceholder || '在标签页中显示的名称'}
-            bind:value={newSessionCaseName}
-            onkeydown={(e) => { if (e.key === 'Enter') handleNewSessionSubmit(); }}
-          />
+        <div class="flex items-center justify-between border-t border-gray-100 pt-3">
+          <button
+            class="text-[12px] text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
+            onclick={() => showManualInput = true}
+          >
+            {t.sshManualInput || '手动输入 ID →'}
+          </button>
+          <button
+            class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            onclick={() => showNewSessionDialog = false}
+          >
+            {t.cancel || '取消'}
+          </button>
         </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-5">
-        <button
-          class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-          onclick={() => showNewSessionDialog = false}
-        >
-          {t.cancel || '取消'}
-        </button>
-        <button
-          class="h-10 px-5 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          onclick={handleNewSessionSubmit}
-          disabled={!newSessionCaseId.trim()}
-        >
-          {t.sshConnect || '连接'}
-        </button>
-      </div>
+      {:else}
+        <!-- Manual input fallback -->
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshCaseId || '场景/部署 ID'}</label>
+            <input
+              type="text"
+              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder={t.sshCaseIdPlaceholder || '输入场景或部署 ID'}
+              bind:value={newSessionCaseId}
+              onkeydown={(e) => { if (e.key === 'Enter') handleNewSessionSubmit(); }}
+            />
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshDisplayName || '显示名称 (可选)'}</label>
+            <input
+              type="text"
+              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder={t.sshDisplayNamePlaceholder || '在标签页中显示的名称'}
+              bind:value={newSessionCaseName}
+              onkeydown={(e) => { if (e.key === 'Enter') handleNewSessionSubmit(); }}
+            />
+          </div>
+        </div>
+        <div class="flex items-center justify-between mt-5">
+          <button
+            class="text-[12px] text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
+            onclick={() => showManualInput = false}
+          >
+            ← {t.sshBackToCases || '返回场景列表'}
+          </button>
+          <div class="flex gap-2">
+            <button
+              class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              onclick={() => showNewSessionDialog = false}
+            >
+              {t.cancel || '取消'}
+            </button>
+            <button
+              class="h-10 px-5 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              onclick={handleNewSessionSubmit}
+              disabled={!newSessionCaseId.trim()}
+            >
+              {t.sshConnect || '连接'}
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

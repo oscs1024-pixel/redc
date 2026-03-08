@@ -168,6 +168,7 @@ export const i18n = {
     sshCaseIdPlaceholder: '输入场景或部署 ID', sshNoForwards: '暂无活跃的端口转发', sshAllFieldsRequired: '请填写所有字段', sshCurrentSession: '当前会话',
     execUserdata: '命令片段', noTemplates: '暂无可用模板', scriptPreview: '脚本预览', uploading: '上传中...', uploadAndExec: '上传并执行', loading: '加载中...',
     sendToAI: '发送到 AI 分析', analyzeTerminalPrompt: '请帮我分析以下终端输出内容',
+    sshActiveCases: '运行中的场景', sshNoCasesRunning: '暂无运行中的场景', sshManualInput: '手动输入 ID →', sshBackToCases: '返回场景列表', predefined: '预定义', custom: '自定义',
     // Scheduled Tasks
     execSuccess: '执行成功', execFailed: '执行失败',
     uploadFile: '上传文件', downloadFile: '下载文件',
@@ -465,6 +466,7 @@ export const i18n = {
     sshCaseIdPlaceholder: 'Enter case or deployment ID', sshNoForwards: 'No active port forwards', sshAllFieldsRequired: 'All fields are required', sshCurrentSession: 'Current session',
     loading: 'Loading...',
     sendToAI: 'Send to AI Analysis', analyzeTerminalPrompt: 'Please help me analyze the following terminal output',
+    sshActiveCases: 'Active Scenarios', sshNoCasesRunning: 'No running scenarios', sshManualInput: 'Manual ID input →', sshBackToCases: 'Back to case list', predefined: 'Predefined', custom: 'Custom',
     // Scheduled Tasks
     execSuccess: 'Exec Success', execFailed: 'Exec Failed',
     uploadFile: 'Upload File', downloadFile: 'Download File',
