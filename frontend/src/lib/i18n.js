@@ -263,6 +263,8 @@ export const i18n = {
     aiChatWelcomeCost: '你好！发送任意消息，我将分析当前运行中的场景并提供成本优化建议。',
     aiChatCopied: '已复制', aiChatSaveTemplate: '保存模板', aiChatCopyContent: '复制内容',
     aiChatStreaming: 'AI 思考中...',
+    aiChatRedirectHint: 'AI 模板生成、场景推荐、成本优化等功能已迁移至 AI 对话页面，支持多轮对话和流式输出。',
+    goToAIChat: '前往 AI 对话',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -539,6 +541,8 @@ export const i18n = {
     aiChatWelcomeCost: 'Hello! Send any message and I\'ll analyze your running scenarios and provide cost optimization suggestions.',
     aiChatCopied: 'Copied', aiChatSaveTemplate: 'Save Template', aiChatCopyContent: 'Copy Content',
     aiChatStreaming: 'AI is thinking...',
+    aiChatRedirectHint: 'AI template generation, scenario recommendations, and cost optimization have moved to the AI Chat page, with multi-turn conversations and streaming output.',
+    goToAIChat: 'Go to AI Chat',
   }
 };
 

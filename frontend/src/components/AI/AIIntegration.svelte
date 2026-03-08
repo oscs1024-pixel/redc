@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetMCPStatus, StartMCPServer, StopMCPServer, RecommendTemplates, AIRecommendTemplates, AICostOptimization, AIGenerateTemplate, SaveTemplateFiles, PullTemplate, GetActiveProfile } from '../../../wailsjs/wailsjs/go/main/App.js';
-  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
+  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile } from '../../../wailsjs/wailsjs/go/main/App.js';
 
   let { t, onTabChange = () => {} } = $props();
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
@@ -22,28 +21,6 @@
   let showApiKey = $state(false);
   let hasAIConfig = $state(false);
 
-  // Smart recommendation state
-  let recommendQuery = $state('');
-  let recommendLoading = $state(false);
-  let recommendResults = $state([]);
-  let showRecommendResults = $state(false);
-  let pullingTemplate = $state('');
-  let aiRecommendText = $state('');
-  let aiRecommending = $state(false);
-  
-  // Template generation state
-  let templateQuery = $state('');
-  let templateLoading = $state(false);
-  let generatedTemplate = $state('');
-  let templateGenerating = $state(false);
-
-  // Cost optimization state
-  let costLoading = $state(false);
-  let costSuggestions = $state([]);
-  let showCostSuggestions = $state(false);
-  let aiCostText = $state('');
-  let aiCostAnalyzing = $state(false);
-
   // Provider presets
   const providerPresets = {
     openai: {
@@ -60,92 +37,9 @@
     }
   };
 
-  // Mock data for cost optimization
-  const mockCostSuggestions = [
-    {
-      caseId: 'case-001',
-      caseName: '测试环境-阿里云',
-      currentCost: 156.80,
-      potentialSavings: 47.20,
-      suggestions: [
-        '建议将 ecs.g6.large 实例降级为 ecs.g6.medium，可节省约 30% 成本',
-        '当前实例利用率仅 15%，建议启用自动伸缩策略'
-      ],
-      priority: 'high'
-    },
-    {
-      caseId: 'case-002', 
-      caseName: '开发环境-腾讯云',
-      currentCost: 89.50,
-      potentialSavings: 26.85,
-      suggestions: [
-        '开发环境建议使用竞价实例，可节省约 60% 成本',
-        '建议配置定时关机策略，非工作时间自动停止'
-      ],
-      priority: 'medium'
-    },
-    {
-      caseId: 'case-003',
-      caseName: '生产环境-华为云',
-      currentCost: 328.00,
-      potentialSavings: 65.60,
-      suggestions: [
-        '建议购买预留实例券，长期使用可节省约 20%',
-        '存储卷类型可由 SSD 降级为高 IO，节省存储成本'
-      ],
-      priority: 'low'
-    }
-  ];
-
   onMount(() => {
     loadMCPStatus();
     loadAIConfig();
-
-    // Listen for AI recommendation events
-    EventsOn('ai-recommend-chunk', (chunk) => {
-      aiRecommendText += chunk;
-      // Show results when first chunk arrives
-      if (!showRecommendResults) {
-        showRecommendResults = true;
-      }
-    });
-
-    EventsOn('ai-recommend-complete', () => {
-      aiRecommending = false;
-      recommendLoading = false;
-    });
-
-    // Listen for AI cost optimization events
-    EventsOn('ai-cost-chunk', (chunk) => {
-      aiCostText += chunk;
-      // Show results when first chunk arrives
-      if (!showCostSuggestions) {
-        showCostSuggestions = true;
-      }
-    });
-
-    EventsOn('ai-cost-complete', () => {
-      aiCostAnalyzing = false;
-      costLoading = false;
-    });
-    
-    // Listen for AI template generation events
-    EventsOn('ai-template-gen-chunk', (chunk) => {
-      generatedTemplate += chunk;
-      templateGenerating = true;
-    });
-
-    EventsOn('ai-template-gen-complete', () => {
-      templateGenerating = false;
-      templateLoading = false;
-    });
-
-    return () => {
-      EventsOff('ai-recommend-chunk');
-      EventsOff('ai-recommend-complete');
-      EventsOff('ai-cost-chunk');
-      EventsOff('ai-cost-complete');
-    };
   });
 
   async function loadMCPStatus() {
@@ -212,186 +106,6 @@
       error = e.message || String(e);
     } finally {
       mcpLoading = false;
-    }
-  }
-
-  async function handleRecommend() {
-    if (!recommendQuery.trim()) return;
-    
-    // Check if AI is configured
-    if (!isAIConfigured()) {
-      error = t.aiNotConfiguredHint || '请先在凭据管理页面配置 AI API Key';
-      return;
-    }
-
-    recommendLoading = true;
-    aiRecommending = true;
-    showRecommendResults = false;
-    aiRecommendText = '';
-    error = '';
-    
-    try {
-      await AIRecommendTemplates(recommendQuery);
-      // Don't set showRecommendResults here - it will be set when first chunk arrives
-    } catch (e) {
-      error = e.message || String(e);
-      aiRecommending = false;
-      recommendLoading = false;
-    }
-  }
-  
-  async function handleGenerateTemplate() {
-    if (!templateQuery.trim()) return;
-    
-    // Check if AI is configured
-    if (!isAIConfigured()) {
-      error = t.aiNotConfiguredHint || '请先在凭据管理页面配置 AI API Key';
-      return;
-    }
-
-    templateLoading = true;
-    templateGenerating = true;
-    generatedTemplate = '';
-    error = '';
-    
-    try {
-      await AIGenerateTemplate(templateQuery);
-    } catch (e) {
-      error = e.message || String(e);
-      templateGenerating = false;
-      templateLoading = false;
-    }
-  }
-  
-  async function handleSaveTemplate() {
-    if (!generatedTemplate.trim()) return;
-    
-    // Parse Markdown to extract files
-    const files = parseTemplateMarkdown(generatedTemplate);
-    
-    if (Object.keys(files).length === 0) {
-      error = '无法解析模板，请确保生成的内容包含文件标题';
-      return;
-    }
-    
-    // Extract template name from case.json or use default
-    let templateName = 'ai-generated-template';
-    if (files['case.json']) {
-      try {
-        const caseJson = JSON.parse(files['case.json']);
-        templateName = caseJson.name || caseJson.Name || templateName;
-      } catch (e) {
-        // Use default name
-      }
-    }
-    
-    // Add ai- prefix if not already present
-    if (!templateName.toLowerCase().startsWith('ai-')) {
-      templateName = 'ai-' + templateName;
-    }
-    
-    try {
-      const savedPath = await SaveTemplateFiles(templateName, files);
-      error = '';
-      successMessage = `模板已保存到：${savedPath}`;
-      // 3 秒后自动清除成功提示
-      setTimeout(() => {
-        successMessage = '';
-      }, 3000);
-    } catch (e) {
-      error = e.message || String(e);
-      successMessage = '';
-    }
-  }
-  
-  // Parse Markdown template content and extract individual files
-  function parseTemplateMarkdown(markdown) {
-    /** @type {Record<string, string>} */
-    const files = {};
-    const fileBlocks = markdown.split(/^###\s+/m);
-    
-    for (const block of fileBlocks) {
-      if (!block.trim()) continue;
-      
-      // Extract filename from first line
-      const lines = block.split('\n');
-      const filename = lines[0].trim();
-      
-      // Check if it's a known file type
-      if (!filename.match(/\.(json|tfvars|tf|md|sh|yaml|yml)$/i)) {
-        continue;
-      }
-      
-      // Get content (everything after filename)
-      const content = lines.slice(1).join('\n').trim();
-      
-      // Remove markdown code block markers if present
-      let fileContent = content.replace(/^```[\w]*\n?/g, '').replace(/```$/g, '').trim();
-      
-      files[filename] = fileContent;
-    }
-    
-    return files;
-  }
-  
-  async function handleCopyTemplate() {
-    if (!generatedTemplate.trim()) return;
-    try {
-      await navigator.clipboard.writeText(generatedTemplate);
-    } catch (e) {
-      console.error('Failed to copy:', e);
-    }
-  }
-
-  async function handlePullTemplate(template) {
-    pullingTemplate = template;
-    try {
-      await PullTemplate(template, false);
-    } catch (e) {
-      error = e.message || String(e);
-    } finally {
-      pullingTemplate = '';
-    }
-  }
-
-  async function handleAnalyzeCost() {
-    // Check if AI is configured
-    if (!isAIConfigured()) {
-      error = t.aiNotConfiguredHint || '请先在凭据管理页面配置 AI API Key';
-      return;
-    }
-
-    costLoading = true;
-    aiCostAnalyzing = true;
-    showCostSuggestions = false;
-    aiCostText = '';
-    error = '';
-
-    try {
-      await AICostOptimization();
-      // Don't set showCostSuggestions here - it will be set when first chunk arrives
-    } catch (e) {
-      error = e.message || String(e);
-      aiCostAnalyzing = false;
-      costLoading = false;
-    }
-  }
-
-  function getPriorityColor(priority) {
-    switch(priority) {
-      case 'high': return 'text-red-600 bg-red-50';
-      case 'medium': return 'text-amber-600 bg-amber-50';
-      case 'low': return 'text-emerald-600 bg-emerald-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  }
-
-  function getPriorityLabel(priority) {
-    switch(priority) {
-      case 'high': return t.priorityHigh || '高';
-      case 'medium': return t.priorityMedium || '中';
-      case 'low': return t.priorityLow || '低';
-      default: return priority;
     }
   }
 
@@ -510,211 +224,28 @@
     {/if}
   </div>
 
-  <!-- Smart Template Generation Card -->
-  {#if isAIConfigured()}
-  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-rose-600 flex items-center justify-center">
-        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+  <!-- AI Chat redirect hint -->
+  <div class="bg-blue-50 rounded-xl border border-blue-100 p-4 sm:p-5">
+    <div class="flex items-start gap-3">
+      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
         </svg>
       </div>
-      <div>
-        <h2 class="text-[13px] sm:text-[14px] font-semibold text-gray-900">{t.aiGenerateTemplate || 'AI 模板生成'}</h2>
-        <p class="text-[11px] sm:text-[12px] text-gray-500">{t.aiGenerateTemplateDesc || '描述您的需求，AI 将为您生成完整的场景模板'}</p>
+      <div class="flex-1 min-w-0">
+        <h3 class="text-[13px] sm:text-[14px] font-semibold text-blue-900 mb-1">{t.aiChat || 'AI 对话'}</h3>
+        <p class="text-[11px] sm:text-[12px] text-blue-700 mb-3">{t.aiChatRedirectHint || 'AI 模板生成、场景推荐、成本优化等功能已迁移至 AI 对话页面，支持多轮对话和流式输出。'}</p>
+        <button
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+          onclick={() => onTabChange('aiChat')}
+        >
+          {t.goToAIChat || '前往 AI 对话'} →
+        </button>
       </div>
-    </div>
-
-    <div class="space-y-3">
-      <div>
-        <textarea 
-          placeholder={t.generateTemplatePlaceholder || '例如：在 AWS 上部署一个 Ghost CMS 博客... 支持多行输入，按 Ctrl/Cmd + Enter 发送，或点击"生成"按钮'}
-          class="w-full h-24 px-3 py-2 text-[12px] sm:text-[13px] bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
-          bind:value={templateQuery}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              handleGenerateTemplate();
-            }
-          }}
-        ></textarea>
-        <div class="flex justify-end mt-2">
-          <button 
-            class="px-4 h-9 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-            onclick={handleGenerateTemplate}
-            disabled={templateLoading || !templateQuery.trim()}
-          >
-            {#if templateLoading}
-              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            {:else}
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            {/if}
-            {t.generate || '生成'}
-          </button>
-        </div>
-      </div>
-
-      {#if generatedTemplate || templateGenerating}
-        <div class="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto border border-gray-100">
-          <pre class="text-[11px] sm:text-[12px] text-gray-900 font-mono whitespace-pre-wrap">{generatedTemplate}</pre>
-        </div>
-        <div class="flex gap-2">
-          <button 
-            class="px-3 h-8 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors cursor-pointer"
-            onclick={handleSaveTemplate}
-          >
-            {t.saveToTemplates || '保存到模板'}
-          </button>
-          <button 
-            class="px-3 h-8 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors cursor-pointer"
-            onclick={handleCopyTemplate}
-          >
-            {t.copyCode || '复制代码'}
-          </button>
-        </div>
-      {/if}
-    </div>
-  </div>
-  {/if}
-
-  <!-- Smart Template Recommendation Card -->
-  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-rose-600 flex items-center justify-center">
-        <svg class="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-      </div>
-      <div>
-        <h2 class="text-[13px] sm:text-[14px] font-semibold text-gray-900">{t.smartRecommend || '智能场景推荐'}</h2>
-        <p class="text-[11px] sm:text-[12px] text-gray-500">{t.smartRecommendDesc || '描述您的需求，AI 将为您推荐最合适的场景模板'}</p>
-      </div>
-    </div>
-
-    <div class="space-y-3">
-      <div>
-        <textarea 
-          placeholder={t.recommendPlaceholder || '例如：我需要一个阿里云的测试环境，用于性能测试... 支持多行输入，按 Ctrl/Cmd + Enter 发送，或点击"推荐"按钮'}
-          class="w-full h-24 px-3 py-2 text-[12px] sm:text-[13px] bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
-          bind:value={recommendQuery}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              handleRecommend();
-            }
-          }}
-        ></textarea>
-        <div class="flex justify-end mt-2">
-          <button 
-            class="px-4 h-9 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-            onclick={handleRecommend}
-            disabled={recommendLoading || !recommendQuery.trim()}
-          >
-            {#if recommendLoading}
-              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            {:else}
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-            {/if}
-            {t.recommend || '推荐'}
-          </button>
-        </div>
-      </div>
-
-      {#if showRecommendResults && aiRecommendText}
-        <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
-          <div class="flex items-start gap-2 mb-2">
-            <svg class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-            </svg>
-            <div class="flex-1">
-              <h3 class="text-[12px] font-medium text-gray-900 mb-2">{t.aiRecommendResult || 'AI 推荐结果'}</h3>
-              <div class="text-[12px] text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {aiRecommendText}
-                {#if aiRecommending}
-                  <span class="inline-block w-1.5 h-4 bg-blue-500 animate-pulse ml-0.5"></span>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
-      {:else if showRecommendResults && !aiRecommendText && !aiRecommending}
-        <div class="text-center py-6 text-gray-500 text-[12px]">
-          {t.noMatch || '未找到匹配的模板'}
-        </div>
-      {/if}
     </div>
   </div>
 
-  <!-- Cost Optimization Card -->
-  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-rose-600 flex items-center justify-center">
-        <svg class="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <div>
-        <h2 class="text-[13px] sm:text-[14px] font-semibold text-gray-900">{t.costOptimization || '成本优化建议'}</h2>
-        <p class="text-[11px] sm:text-[12px] text-gray-500">{t.costOptimizationDesc || '分析运行中的场景，提供成本优化建议'}</p>
-      </div>
-    </div>
-
-    <div class="space-y-3">
-      <button 
-        class="w-full h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-        onclick={handleAnalyzeCost}
-        disabled={costLoading}
-      >
-        {#if costLoading}
-          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          {t.analyzing || '分析中...'}
-        {:else}
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          {t.startAnalysis || '开始分析'}
-        {/if}
-      </button>
-
-      {#if showCostSuggestions && aiCostText}
-        <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
-          <div class="flex items-start gap-2 mb-2">
-            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div class="flex-1">
-              <h3 class="text-[12px] font-medium text-gray-900 mb-2">{t.costAnalysis || '成本优化分析'}</h3>
-              <div class="text-[12px] text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {aiCostText}
-                {#if aiCostAnalyzing}
-                  <span class="inline-block w-1.5 h-4 bg-emerald-500 animate-pulse ml-0.5"></span>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
-      {:else if showCostSuggestions && !aiCostText && !aiCostAnalyzing}
-        <div class="text-center py-6 text-gray-500 text-[12px]">
-          {t.noRunningCases || '当前没有运行中的场景'}
-        </div>
-      {/if}
-    </div>
-  </div>
-
-<!-- MCP Status Card -->
+  <!-- MCP Status Card -->
   <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4">
       <div class="flex items-center gap-3">
