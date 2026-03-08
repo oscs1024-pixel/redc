@@ -1,0 +1,400 @@
+<script>
+  import { onMount } from 'svelte';
+  import { AIChatStream, SaveTemplateFiles } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
+
+  let { t, onTabChange = () => {} } = $props();
+
+  // State
+  let mode = $state('free');
+  let messages = $state([]);
+  let inputText = $state('');
+  let isStreaming = $state(false);
+  let currentConversationId = $state('');
+  let streamingContent = $state('');
+  let error = $state('');
+  let successMessage = $state('');
+  let messagesContainer = $state(null);
+
+  const modes = [
+    { id: 'free', labelKey: 'aiChatFreeChat', icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
+    { id: 'generate', labelKey: 'aiChatGenTemplate', icon: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5' },
+    { id: 'recommend', labelKey: 'aiChatRecommend', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
+    { id: 'cost', labelKey: 'aiChatCostOpt', icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
+  ];
+
+  const welcomeMessages = {
+    free: 'aiChatWelcomeFree',
+    generate: 'aiChatWelcomeGenerate',
+    recommend: 'aiChatWelcomeRecommend',
+    cost: 'aiChatWelcomeCost'
+  };
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  }
+
+  function getWelcomeMessage(m) {
+    return { id: generateId(), role: 'assistant', content: t[welcomeMessages[m]] || '', timestamp: Date.now(), mode: m };
+  }
+
+  // Restore state from localStorage
+  onMount(() => {
+    try {
+      const saved = localStorage.getItem('redc-ai-chat-state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.mode) mode = parsed.mode;
+        if (parsed.messages && parsed.messages.length > 0) {
+          messages = parsed.messages;
+        } else {
+          messages = [getWelcomeMessage(mode)];
+        }
+      } else {
+        messages = [getWelcomeMessage(mode)];
+      }
+    } catch {
+      messages = [getWelcomeMessage(mode)];
+    }
+
+    EventsOn('ai-chat-chunk', (data) => {
+      if (data.conversationId === currentConversationId) {
+        streamingContent += data.chunk;
+      }
+    });
+
+    EventsOn('ai-chat-complete', (data) => {
+      if (data.conversationId === currentConversationId) {
+        if (data.success && streamingContent) {
+          messages = [...messages, {
+            id: generateId(),
+            role: 'assistant',
+            content: streamingContent,
+            timestamp: Date.now(),
+            mode
+          }];
+        } else if (!data.success) {
+          error = t.aiChatStreamError || 'AI 响应失败，请重试';
+        }
+        streamingContent = '';
+        isStreaming = false;
+        currentConversationId = '';
+        saveState();
+      }
+    });
+
+    return () => {
+      EventsOff('ai-chat-chunk');
+      EventsOff('ai-chat-complete');
+    };
+  });
+
+  // Save state to localStorage
+  function saveState() {
+    try {
+      localStorage.setItem('redc-ai-chat-state', JSON.stringify({ mode, messages }));
+    } catch {}
+  }
+
+  // Auto-scroll
+  $effect(() => {
+    if (streamingContent || messages.length) {
+      scrollToBottom();
+    }
+  });
+
+  function scrollToBottom() {
+    if (messagesContainer) {
+      requestAnimationFrame(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      });
+    }
+  }
+
+  // Switch mode
+  function switchMode(newMode) {
+    if (newMode === mode) return;
+    mode = newMode;
+    messages = [getWelcomeMessage(newMode)];
+    streamingContent = '';
+    isStreaming = false;
+    error = '';
+    currentConversationId = '';
+    saveState();
+  }
+
+  // New conversation
+  function newConversation() {
+    messages = [getWelcomeMessage(mode)];
+    streamingContent = '';
+    isStreaming = false;
+    error = '';
+    currentConversationId = '';
+    inputText = '';
+    saveState();
+  }
+
+  // Send message
+  async function sendMessage() {
+    const text = inputText.trim();
+    if (!text || isStreaming) return;
+
+    error = '';
+    const userMsg = { id: generateId(), role: 'assistant', content: '', timestamp: Date.now(), mode };
+    // Actually add user message
+    const userMessage = { id: generateId(), role: 'user', content: text, timestamp: Date.now(), mode };
+    messages = [...messages, userMessage];
+    inputText = '';
+
+    isStreaming = true;
+    streamingContent = '';
+    const convId = generateId();
+    currentConversationId = convId;
+
+    // Build messages for backend (only role + content)
+    const chatMessages = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .filter(m => m.content) // skip empty welcome messages if any issue
+      .map(m => ({ role: m.role, content: m.content }));
+
+    try {
+      await AIChatStream(convId, mode, chatMessages);
+    } catch (e) {
+      error = e.message || String(e);
+      isStreaming = false;
+      streamingContent = '';
+      currentConversationId = '';
+    }
+
+    saveState();
+  }
+
+  // Parse Markdown template content and extract individual files
+  function parseTemplateMarkdown(markdown) {
+    const files = {};
+    const fileBlocks = markdown.split(/^###\s+/m);
+    for (const block of fileBlocks) {
+      if (!block.trim()) continue;
+      const lines = block.split('\n');
+      const filename = lines[0].trim();
+      if (!filename.match(/\.(json|tfvars|tf|md|sh|yaml|yml)$/i)) continue;
+      const content = lines.slice(1).join('\n').trim();
+      let fileContent = content.replace(/^```[\w]*\n?/g, '').replace(/```$/g, '').trim();
+      files[filename] = fileContent;
+    }
+    return files;
+  }
+
+  async function handleSaveTemplate(content) {
+    const files = parseTemplateMarkdown(content);
+    if (Object.keys(files).length === 0) {
+      error = t.noTemplateFound || '未检测到有效的模板文件';
+      return;
+    }
+    let templateName = 'ai-generated-' + Date.now();
+    if (files['case.json']) {
+      try {
+        const caseJson = JSON.parse(files['case.json']);
+        templateName = caseJson.name || caseJson.Name || templateName;
+      } catch {}
+    }
+    if (!templateName.toLowerCase().startsWith('ai-')) {
+      templateName = 'ai-' + templateName;
+    }
+    try {
+      const savedPath = await SaveTemplateFiles(templateName, files);
+      error = '';
+      successMessage = `${t.templateSaved || '模板已保存'}：${savedPath}`;
+      setTimeout(() => { successMessage = ''; }, 3000);
+    } catch (e) {
+      error = e.message || String(e);
+    }
+  }
+
+  async function handleCopyContent(content) {
+    try {
+      await navigator.clipboard.writeText(content);
+      successMessage = t.aiChatCopied || '已复制';
+      setTimeout(() => { successMessage = ''; }, 2000);
+    } catch (e) {
+      console.error('Failed to copy:', e);
+    }
+  }
+</script>
+
+<div class="flex flex-col h-[calc(100vh-8rem)]">
+  <!-- Mode selector -->
+  <div class="flex items-center gap-2 mb-4 flex-shrink-0">
+    {#each modes as m}
+      <button
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer
+          {mode === m.id ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}"
+        onclick={() => switchMode(m.id)}
+      >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d={m.icon} />
+        </svg>
+        {t[m.labelKey] || m.id}
+      </button>
+    {/each}
+    <div class="flex-1"></div>
+    <button
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all cursor-pointer"
+      onclick={newConversation}
+    >
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      {t.aiChatNewConversation || '新对话'}
+    </button>
+  </div>
+
+  <!-- Error / Success -->
+  {#if error}
+    <div class="mb-3 flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg flex-shrink-0">
+      <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+      </svg>
+      <span class="text-[12px] text-red-700 flex-1">{error}</span>
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''}>
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  {/if}
+  {#if successMessage}
+    <div class="mb-3 flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg flex-shrink-0">
+      <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="text-[12px] text-emerald-700">{successMessage}</span>
+    </div>
+  {/if}
+
+  <!-- Messages -->
+  <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer}>
+    {#each messages as msg (msg.id)}
+      {#if msg.role === 'user'}
+        <!-- User message -->
+        <div class="flex justify-end">
+          <div class="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gray-900 text-white">
+            <p class="text-[13px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+          </div>
+        </div>
+      {:else}
+        <!-- Assistant message -->
+        <div class="flex justify-start">
+          <div class="max-w-[85%]">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
+                  <pre class="text-[13px] text-gray-900 whitespace-pre-wrap leading-relaxed font-[inherit]">{msg.content}</pre>
+                </div>
+                <!-- Action buttons -->
+                {#if msg.content}
+                  <div class="flex items-center gap-1 mt-1.5 ml-1">
+                    <button
+                      class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                      onclick={() => handleCopyContent(msg.content)}
+                    >
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                      </svg>
+                      {t.aiChatCopyContent || '复制'}
+                    </button>
+                    {#if mode === 'generate'}
+                      <button
+                        class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        onclick={() => handleSaveTemplate(msg.content)}
+                      >
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        {t.aiChatSaveTemplate || '保存模板'}
+                      </button>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          </div>
+        </div>
+      {/if}
+    {/each}
+
+    <!-- Streaming indicator -->
+    {#if isStreaming}
+      <div class="flex justify-start">
+        <div class="max-w-[85%]">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
+                {#if streamingContent}
+                  <pre class="text-[13px] text-gray-900 whitespace-pre-wrap leading-relaxed font-[inherit]">{streamingContent}<span class="inline-block w-1.5 h-4 bg-rose-500 animate-pulse ml-0.5 align-middle"></span></pre>
+                {:else}
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-[12px] text-gray-400">{t.aiChatStreaming || 'AI 思考中...'}</span>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Scroll sentinel -->
+    <div class="h-1"></div>
+  </div>
+
+  <!-- Input area -->
+  <div class="flex-shrink-0 border-t border-gray-100 pt-3">
+    <div class="flex items-end gap-2">
+      <textarea
+        class="flex-1 px-4 py-2.5 text-[13px] bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
+        rows="2"
+        placeholder={t.aiChatPlaceholder || '输入消息... Ctrl/Cmd+Enter 发送'}
+        bind:value={inputText}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            sendMessage();
+          }
+        }}
+        disabled={isStreaming}
+      ></textarea>
+      <button
+        class="px-4 h-10 bg-gray-900 text-white text-[12px] font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer flex-shrink-0"
+        onclick={sendMessage}
+        disabled={isStreaming || !inputText.trim()}
+      >
+        {#if isStreaming}
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        {:else}
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+          </svg>
+        {/if}
+        {t.aiChatSend || '发送'}
+      </button>
+    </div>
+  </div>
+</div>

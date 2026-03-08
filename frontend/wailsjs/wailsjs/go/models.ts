@@ -102,6 +102,20 @@ export namespace cost {
 
 export namespace main {
 	
+	export class AIChatMessage {
+	    role: string;
+	    content: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIChatMessage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.role = source["role"];
+	        this.content = source["content"];
+	    }
+	}
 	export class BalanceInfo {
 	    provider: string;
 	    amount: string;

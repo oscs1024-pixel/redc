@@ -252,6 +252,17 @@ export const i18n = {
     checkDeploymentManagement: '您可以在"部署管理"页面查看部署详情和日志。',
     deploying: '部署中...',
     confirmDeploy: '确认部署',
+    // AI Chat
+    aiChat: 'AI 对话',
+    aiChatFreeChat: '自由对话', aiChatGenTemplate: '生成模板', aiChatRecommend: '推荐场景', aiChatCostOpt: '成本优化',
+    aiChatPlaceholder: '输入消息... Ctrl/Cmd+Enter 发送',
+    aiChatSend: '发送', aiChatNewConversation: '新对话',
+    aiChatWelcomeFree: '你好！我是 RedC AI 助手，可以帮你解答云资源部署和管理方面的问题。',
+    aiChatWelcomeGenerate: '你好！请描述你需要的场景，我来帮你生成完整的模板。',
+    aiChatWelcomeRecommend: '你好！请描述你的需求，我来为你推荐最合适的场景模板。',
+    aiChatWelcomeCost: '你好！发送任意消息，我将分析当前运行中的场景并提供成本优化建议。',
+    aiChatCopied: '已复制', aiChatSaveTemplate: '保存模板', aiChatCopyContent: '复制内容',
+    aiChatStreaming: 'AI 思考中...',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -517,6 +528,17 @@ export const i18n = {
     checkDeploymentManagement: 'You can view deployment details and logs in the "Deployment Management" page.',
     deploying: 'Deploying...',
     confirmDeploy: 'Confirm Deploy',
+    // AI Chat
+    aiChat: 'AI Chat',
+    aiChatFreeChat: 'Free Chat', aiChatGenTemplate: 'Generate Template', aiChatRecommend: 'Recommend Scenario', aiChatCostOpt: 'Cost Optimization',
+    aiChatPlaceholder: 'Type a message... Ctrl/Cmd+Enter to send',
+    aiChatSend: 'Send', aiChatNewConversation: 'New Chat',
+    aiChatWelcomeFree: 'Hello! I\'m the RedC AI assistant. I can help you with cloud resource deployment and management questions.',
+    aiChatWelcomeGenerate: 'Hello! Describe the scenario you need and I\'ll generate a complete template for you.',
+    aiChatWelcomeRecommend: 'Hello! Describe your needs and I\'ll recommend the best scenario templates for you.',
+    aiChatWelcomeCost: 'Hello! Send any message and I\'ll analyze your running scenarios and provide cost optimization suggestions.',
+    aiChatCopied: 'Copied', aiChatSaveTemplate: 'Save Template', aiChatCopyContent: 'Copy Content',
+    aiChatStreaming: 'AI is thinking...',
   }
 };
 

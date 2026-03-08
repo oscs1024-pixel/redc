@@ -8,6 +8,7 @@
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
   import AIIntegration from './components/AI/AIIntegration.svelte';
+  import AIChat from './components/AI/AIChat.svelte';
   import SpecialModules from './components/SpecialModules/SpecialModules.svelte';
   import Registry from './components/Registry/Registry.svelte';
   import Credentials from './components/Credentials/Credentials.svelte';
@@ -304,7 +305,7 @@
     <!-- Header -->
     <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6" style="--wails-draggable:drag">
       <h1 class="text-[15px] font-medium text-gray-900">
-        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
+        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'aiChat'}{t.aiChat}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
       </h1>
       <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
         <!-- Window Controls (Windows only) -->
@@ -401,6 +402,9 @@
 
             {:else if activeTab === 'ai'}
               <AIIntegration {t} onTabChange={(tab) => activeTab = tab} />
+
+            {:else if activeTab === 'aiChat'}
+              <AIChat {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'specialModules'}
               <SpecialModules {t} onTabChange={(tab) => activeTab = tab} />
