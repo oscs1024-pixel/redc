@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SetShowWelcomeDialog } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { SetShowWelcomeDialog } from '../../../wailsjs/go/main/App.js';
 
   let { t, show = false, onClose } = $props();
   

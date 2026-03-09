@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, SaveTemplateFiles } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, SaveTemplateFiles } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
 
   let { t, onTabChange = () => {}, visible = true } = $props();

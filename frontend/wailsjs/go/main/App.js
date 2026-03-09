@@ -6,8 +6,16 @@ export function AgentChatStream(arg1, arg2) {
   return window['go']['main']['App']['AgentChatStream'](arg1, arg2);
 }
 
+export function AIChatStream(arg1, arg2, arg3) {
+  return window['go']['main']['App']['AIChatStream'](arg1, arg2, arg3);
+}
+
 export function AICostOptimization() {
   return window['go']['main']['App']['AICostOptimization']();
+}
+
+export function AIGenerateTemplate(arg1) {
+  return window['go']['main']['App']['AIGenerateTemplate'](arg1);
 }
 
 export function AIRecommendTemplates(arg1) {
@@ -138,6 +146,10 @@ export function FetchRegistryTemplates(arg1) {
   return window['go']['main']['App']['FetchRegistryTemplates'](arg1);
 }
 
+export function FetchTemplateReadme(arg1, arg2) {
+  return window['go']['main']['App']['FetchTemplateReadme'](arg1, arg2);
+}
+
 export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
 }
@@ -190,6 +202,10 @@ export function GetInstanceTypes(arg1, arg2) {
   return window['go']['main']['App']['GetInstanceTypes'](arg1, arg2);
 }
 
+export function GetLanguage() {
+  return window['go']['main']['App']['GetLanguage']();
+}
+
 export function GetMCPStatus() {
   return window['go']['main']['App']['GetMCPStatus']();
 }
@@ -220,6 +236,10 @@ export function GetResourceSummary() {
 
 export function GetScheduledTask(arg1) {
   return window['go']['main']['App']['GetScheduledTask'](arg1);
+}
+
+export function GetShowWelcomeDialog() {
+  return window['go']['main']['App']['GetShowWelcomeDialog']();
 }
 
 export function GetSSHInfoForCase(arg1) {
@@ -396,6 +416,14 @@ export function SetDisableRightClick(arg1) {
 
 export function SetNotificationEnabled(arg1) {
   return window['go']['main']['App']['SetNotificationEnabled'](arg1);
+}
+
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
+}
+
+export function SetShowWelcomeDialog(arg1) {
+  return window['go']['main']['App']['SetShowWelcomeDialog'](arg1);
 }
 
 export function StartCase(arg1) {

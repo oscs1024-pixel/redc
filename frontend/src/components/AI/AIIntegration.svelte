@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile } from '../../../wailsjs/go/main/App.js';
 
   let { t, onTabChange = () => {} } = $props();
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });

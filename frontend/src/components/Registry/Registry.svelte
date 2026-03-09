@@ -1,7 +1,7 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme, GetLanguage } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme, GetLanguage } from '../../../wailsjs/go/main/App.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
 
   // Registry state
