@@ -329,7 +329,7 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "list_cases",
-			Description: "List all running cases in the current project",
+			Description: "List all cases (scenes) in the current project with their status (created, running, stopped, etc.)",
 			InputSchema: ToolSchema{
 				Type:       "object",
 				Properties: map[string]Property{},
@@ -1060,8 +1060,14 @@ func (s *MCPServer) toolListCases() (ToolResult, error) {
 	if len(cases) == 0 {
 		output += "No cases found.\n"
 	} else {
+		stateCounts := make(map[string]int)
 		for _, c := range cases {
 			output += fmt.Sprintf("- ID: %s, Name: %s, Status: %s, Type: %s\n", c.GetId(), c.Name, c.State, c.Type)
+			stateCounts[c.State]++
+		}
+		output += fmt.Sprintf("\nSummary: %d total cases\n", len(cases))
+		for state, count := range stateCounts {
+			output += fmt.Sprintf("- %s: %d\n", state, count)
 		}
 	}
 
