@@ -6,10 +6,9 @@
     DeleteRemoteFile, 
     RenameRemoteFile,
     UploadFile,
-    DownloadFile,
-    SelectFile,
-    SelectDirectory
+    DownloadFile
   } from '../../../wailsjs/go/main/App.js';
+  import { selectFile, selectDirectory } from '../../lib/file-dialog.js';
 
   let { t, caseId, caseName, onClose } = $props();
 
@@ -125,7 +124,7 @@
 
   async function handleUpload() {
     try {
-      const localPath = await SelectFile(t.selectFile || '选择文件');
+      const localPath = await selectFile(t.selectFile || '选择文件');
       if (!localPath) return;
       
       uploading = true;
@@ -150,7 +149,7 @@
 
   async function handleDownload(file) {
     try {
-      const localDir = await SelectDirectory(t.selectDirectory || '选择保存目录');
+      const localDir = await selectDirectory(t.selectDirectory || '选择保存目录');
       if (!localDir) return;
       
       downloading = true;

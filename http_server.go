@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -201,6 +202,38 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 		}
 	})
 
+	// File upload endpoint for browser mode
+	mux.HandleFunc("/api/upload", func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r) {
+			http.Error(w, "Unauthorized", 401)
+			return
+		}
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", 405)
+			return
+		}
+		r.ParseMultipartForm(32 << 20) // 32MB max
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, "No file provided", 400)
+			return
+		}
+		defer file.Close()
+
+		// Save to temp directory
+		tmpDir := os.TempDir()
+		tmpFile, err := os.CreateTemp(tmpDir, "redc-upload-*-"+header.Filename)
+		if err != nil {
+			http.Error(w, "Failed to create temp file", 500)
+			return
+		}
+		defer tmpFile.Close()
+		io.Copy(tmpFile, file)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"path": tmpFile.Name()})
+	})
+
 	// Static files (SPA fallback)
 	subFS, err := fs.Sub(staticFS, "frontend/dist")
 	if err != nil {
@@ -300,8 +333,19 @@ func (s *HTTPServer) Stop() error {
 	return err
 }
 
+// blockedInHTTPMode lists methods that require native OS dialogs
+var blockedInHTTPMode = map[string]bool{
+	"SelectFile":      true,
+	"SelectDirectory": true,
+	"SelectSaveFile":  true,
+}
+
 // dispatch calls an App method by name using reflection
 func (s *HTTPServer) dispatch(method string, args []json.RawMessage) (interface{}, error) {
+	if blockedInHTTPMode[method] {
+		return nil, fmt.Errorf("此功能在浏览器模式下不可用，请使用桌面应用")
+	}
+
 	appVal := reflect.ValueOf(s.app)
 	m := appVal.MethodByName(method)
 	if !m.IsValid() {

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ExportConfigTemplate, ImportConfigTemplate, SelectFile, SelectSaveFile } from '../../../wailsjs/go/main/App.js';
+  import { ExportConfigTemplate, ImportConfigTemplate } from '../../../wailsjs/go/main/App.js';
+  import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
 
   let { t, show = false, mode = 'export', templateName = '', onClose, onImported } = $props();
   
@@ -49,7 +50,7 @@
   async function handleSelectFile() {
     error = '';
     try {
-      const file = await SelectFile(t.selectConfigFile || '选择配置文件');
+      const file = await selectFile(t.selectConfigFile || '选择配置文件');
       if (file) {
         selectedFile = file;
       }
@@ -66,7 +67,7 @@
     try {
       // Open save file dialog
       const defaultFilename = `${templateName}.json`;
-      const savePath = await SelectSaveFile(
+      const savePath = await selectSaveFile(
         t.exportConfigTemplate || '导出配置模板',
         defaultFilename
       );

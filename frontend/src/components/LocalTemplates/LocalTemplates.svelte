@@ -1,7 +1,8 @@
 <script>
 
   import { onMount } from 'svelte';
-  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, SelectFile, SelectSaveFile, CopyFileTo, ExportTemplates, ImportTemplates } from '../../../wailsjs/go/main/App.js';
+  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates } from '../../../wailsjs/go/main/App.js';
+  import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
   // Translation object passed from parent component
@@ -340,7 +341,7 @@
     exportMessage = '';
     try {
       const templateNames = Array.from(selectedTemplates);
-      const savePath = await SelectSaveFile(
+      const savePath = await selectSaveFile(
         t.exportTemplates || '导出模板',
         'templates.zip'
       );
@@ -369,7 +370,7 @@
     importing = true;
     exportMessage = '';
     try {
-      const filePath = await SelectFile(t.importTemplates || '导入模板');
+      const filePath = await selectFile(t.importTemplates || '导入模板');
       
       if (!filePath) {
         importing = false;

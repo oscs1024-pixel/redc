@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { ExecCommand, ExecUserdata, UploadFile, DownloadFile, SelectFile, SelectDirectory, SelectSaveFile } from '../../../wailsjs/go/main/App.js';
+  import { ExecCommand, ExecUserdata, UploadFile, DownloadFile } from '../../../wailsjs/go/main/App.js';
+  import { selectFile, selectDirectory } from '../../lib/file-dialog.js';
   import WebTerminal from './WebTerminal.svelte';
   import FileManager from './FileManager.svelte';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
@@ -62,7 +63,7 @@
 
   async function handleSelectUploadFile() {
     try {
-      const path = await SelectFile(t.selectFile || '选择文件');
+      const path = await selectFile(t.selectFile || '选择文件');
       if (path) {
         uploadLocalPath = path;
       }
@@ -92,7 +93,7 @@
 
   async function handleSelectDownloadDir() {
     try {
-      const path = await SelectDirectory(t.selectDirectory || '选择保存目录');
+      const path = await selectDirectory(t.selectDirectory || '选择保存目录');
       if (path) {
         downloadLocalPath = path;
       }
