@@ -117,22 +117,64 @@ let {
   }
   
   // Use a getter function to ensure we always reference the current prop values
-  const navItems = $derived([
-    { id: 'dashboard', icon: 'dashboard', labelKey: 'dashboard' },
-    { id: 'cases', icon: 'cases', labelKey: 'cases' },
-    { id: 'customDeployment', icon: 'customDeployment', labelKey: 'customDeployment' },
-    { id: 'specialModules', icon: 'specialModules', labelKey: 'specialModules' },
-    { id: 'console', icon: 'console', labelKey: 'console' },
-    { id: 'resources', icon: 'resources', labelKey: 'resources', onClick: () => onLoadResourceSummary() },
-    { id: 'compose', icon: 'compose', labelKey: 'compose' },
-    { id: 'credentials', icon: 'credentials', labelKey: 'credentials' },
-    { id: 'registry', icon: 'registry', labelKey: 'registry' },
-    { id: 'localTemplates', icon: 'localTemplates', labelKey: 'localTemplates' },
-    { id: 'ai', icon: 'ai', labelKey: 'ai', onClick: () => onLoadMCPStatus() },
-    { id: 'aiChat', icon: 'aiChat', labelKey: 'aiChat' },
-    { id: 'sshManager', icon: 'sshManager', labelKey: 'sshManager' },
-    { id: 'settings', icon: 'settings', labelKey: 'settings' }
+  const navSections = $derived([
+    { type: 'item', id: 'dashboard', icon: 'dashboard', labelKey: 'dashboard' },
+    { type: 'group', key: 'deploy', labelKey: 'navGroupDeploy', items: [
+      { id: 'cases', icon: 'cases', labelKey: 'cases' },
+      { id: 'customDeployment', icon: 'customDeployment', labelKey: 'customDeployment' },
+      { id: 'compose', icon: 'compose', labelKey: 'compose' },
+      { id: 'specialModules', icon: 'specialModules', labelKey: 'specialModules' },
+    ]},
+    { type: 'group', key: 'ops', labelKey: 'navGroupOps', items: [
+      { id: 'console', icon: 'console', labelKey: 'console' },
+      { id: 'resources', icon: 'resources', labelKey: 'resources', onClick: () => onLoadResourceSummary() },
+      { id: 'sshManager', icon: 'sshManager', labelKey: 'sshManager' },
+    ]},
+    { type: 'group', key: 'template', labelKey: 'navGroupTemplate', items: [
+      { id: 'registry', icon: 'registry', labelKey: 'registry' },
+      { id: 'localTemplates', icon: 'localTemplates', labelKey: 'localTemplates' },
+    ]},
+    { type: 'group', key: 'ai', labelKey: 'navGroupAI', items: [
+      { id: 'ai', icon: 'ai', labelKey: 'ai', onClick: () => onLoadMCPStatus() },
+      { id: 'aiChat', icon: 'aiChat', labelKey: 'aiChat' },
+    ]},
+    { type: 'group', key: 'system', labelKey: 'navGroupSystem', items: [
+      { id: 'credentials', icon: 'credentials', labelKey: 'credentials' },
+      { id: 'settings', icon: 'settings', labelKey: 'settings' },
+    ]},
   ]);
+
+  // Collapsible group state — persisted to localStorage
+  let collapsedGroups = $state(loadCollapsedGroups());
+
+  function loadCollapsedGroups() {
+    try {
+      const saved = localStorage.getItem('redc-sidebar-collapsed');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  }
+
+  function toggleGroup(key) {
+    collapsedGroups = { ...collapsedGroups, [key]: !collapsedGroups[key] };
+    localStorage.setItem('redc-sidebar-collapsed', JSON.stringify(collapsedGroups));
+  }
+
+  function isGroupActive(items) {
+    return items.some(item => item.id === activeTab);
+  }
+
+  // Auto-expand group when its child becomes active
+  $effect(() => {
+    for (const section of navSections) {
+      if (section.type === 'group' && collapsedGroups[section.key]) {
+        if (section.items.some(item => item.id === activeTab)) {
+          collapsedGroups = { ...collapsedGroups, [section.key]: false };
+          localStorage.setItem('redc-sidebar-collapsed', JSON.stringify(collapsedGroups));
+          break;
+        }
+      }
+    }
+  });
 
   const icons = {
     dashboard: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
@@ -176,19 +218,51 @@ let {
   </div>
   
   <!-- Navigation -->
-  <nav class="flex-1 p-2">
+  <nav class="flex-1 p-2 overflow-y-auto">
     <div class="space-y-0.5">
-      {#each navItems as item}
-        <button 
-          class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap
-            {activeTab === item.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 cursor-pointer'}"
-          onclick={() => handleNavClick(item)}
-        >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d={icons[item.icon]} />
-          </svg>
-          {t[item.labelKey]}
-        </button>
+      {#each navSections as section}
+        {#if section.type === 'item'}
+          <button 
+            class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap
+              {activeTab === section.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 cursor-pointer'}"
+            onclick={() => handleNavClick(section)}
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d={icons[section.icon]} />
+            </svg>
+            {t[section.labelKey]}
+          </button>
+        {:else}
+          <!-- Group header -->
+          <button
+            class="w-full flex items-center justify-between px-2.5 pt-3 pb-1 cursor-pointer group"
+            onclick={() => toggleGroup(section.key)}
+          >
+            <span class="text-[10px] uppercase tracking-wider font-semibold transition-colors
+              {isGroupActive(section.items) ? 'text-gray-600' : 'text-gray-400 group-hover:text-gray-500'}">
+              {t[section.labelKey]}
+            </span>
+            <svg class="w-3 h-3 text-gray-300 group-hover:text-gray-400 transition-all {collapsedGroups[section.key] ? '-rotate-90' : ''}"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          <!-- Group items -->
+          {#if !collapsedGroups[section.key]}
+            {#each section.items as item}
+              <button 
+                class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap
+                  {activeTab === item.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 cursor-pointer'}"
+                onclick={() => handleNavClick(item)}
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d={icons[item.icon]} />
+                </svg>
+                {t[item.labelKey]}
+              </button>
+            {/each}
+          {/if}
+        {/if}
       {/each}
     </div>
   </nav>

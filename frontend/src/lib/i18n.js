@@ -1,6 +1,7 @@
 export const i18n = {
   zh: {
     dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成', localTemplates: '本地模板', specialModules: '专项模块',
+    navGroupDeploy: '部署管理', navGroupOps: '运维工具', navGroupTemplate: '模板管理', navGroupAI: 'AI 助手', navGroupSystem: '系统',
     cases: '预定义场景',
     project: '项目', selectProject: '选择项目...', newProject: '新建项目', projectName: '项目名称', createProject: '创建项目', switchProject: '切换项目', currentProject: '当前项目',
     loadingProjects: '加载中...', noProjects: '暂无项目', enterProjectName: '输入项目名称...',
@@ -338,6 +339,7 @@ export const i18n = {
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
+    navGroupDeploy: 'Deploy', navGroupOps: 'Operations', navGroupTemplate: 'Templates', navGroupAI: 'AI', navGroupSystem: 'System',
     cases: 'Preset Scenarios',
     project: 'Project', selectProject: 'Select Project...', newProject: 'New Project', projectName: 'Project Name', createProject: 'Create Project', switchProject: 'Switch Project', currentProject: 'Current Project',
     loadingProjects: 'Loading...', noProjects: 'No projects', enterProjectName: 'Enter project name...',
