@@ -23,7 +23,7 @@ var opts struct {
 var pullCmd = &cobra.Command{
 	Use:   "pull <image>[:tag]",
 	Short: "Pull a template from registry",
-	Args:  cobra.ExactArgs(1), // 必须传入 1 个参数
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		pullOpts := mod.PullOptions{
@@ -36,19 +36,30 @@ var pullCmd = &cobra.Command{
 
 		if err != nil {
 			if strings.Contains(err.Error(), "context canceled") {
+				if IsJSON() {
+					PrintJSONError(fmt.Errorf("operation canceled"))
+					return nil
+				}
 				gologger.Warning().Msg("❌ Operation canceled by user.")
+				return nil
+			}
+			if IsJSON() {
+				PrintJSONError(err)
 				return nil
 			}
 			return err
 		}
 
+		if IsJSON() {
+			PrintJSON(map[string]string{"template": args[0], "status": "pulled"})
+		}
 		return nil
 	},
 }
 var searchCmd = &cobra.Command{
 	Use:   "search xxx",
 	Short: "Search registry ",
-	Args:  cobra.ExactArgs(1), // 必须传入 1 个参数
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		pullOpts := mod.PullOptions{
@@ -60,29 +71,37 @@ var searchCmd = &cobra.Command{
 
 		if err != nil {
 			if strings.Contains(err.Error(), "context canceled") {
+				if IsJSON() {
+					PrintJSONError(fmt.Errorf("operation canceled"))
+					return nil
+				}
 				gologger.Warning().Msg("❌ Operation canceled by user.")
+				return nil
+			}
+			if IsJSON() {
+				PrintJSONError(err)
 				return nil
 			}
 			return err
 		}
+
+		if IsJSON() {
+			PrintJSON(res)
+			return nil
+		}
+
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 4, ' ', 0)
-		// 打印表头
 		fmt.Fprintln(w, "NAME\tVERSION\tAUTHOR\tDESCRIPTION")
 
 		for _, item := range res {
-			// 处理描述：移除换行符 + 截断过长文本
 			desc := cleanDescription(item.Description)
-
-			// 格式化输出
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-				item.Key,     // NAME (例如 aliyun/ecs)
-				item.Version, // VERSION
-				item.Author,  // AUTHOR
-				desc,         // DESCRIPTION
+				item.Key,
+				item.Version,
+				item.Author,
+				desc,
 			)
 		}
-
-		// 刷新缓冲区，将内容输出到终端
 		w.Flush()
 
 		return nil

@@ -53,6 +53,10 @@ var rootCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if showVer {
+			if IsJSON() {
+				PrintJSON(map[string]string{"version": redc.Version})
+				return
+			}
 			gologger.Print().Msgf("%s\nVersion: %s\n", BannerArt, redc.Version)
 			return
 		}
@@ -76,4 +80,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&redc.U, "user", "u", "system", i18n.T("flag_user"))
 	rootCmd.PersistentFlags().StringVar(&redc.Project, "project", "default", i18n.T("flag_project"))
 	rootCmd.PersistentFlags().BoolVar(&redc.Debug, "debug", false, i18n.T("flag_debug"))
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "Output format: json or table (default: table)")
 }

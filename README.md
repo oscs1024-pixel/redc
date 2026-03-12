@@ -389,6 +389,58 @@ This requires template support for changes, can switch elastic public IP
 redc change [caseid]
 ````
 
+## JSON Output
+
+All CLI commands support `--output json` (short form `-o json`), producing structured JSON output for scripting and automation.
+
+**Basic Usage**
+
+```bash
+# List all cases in JSON format
+redc ps -o json
+
+# Start a case and get structured result
+redc run aliyun/ecs --output json
+
+# Check case status
+redc status [caseid] -o json
+
+# Search templates
+redc search aliyun -o json
+
+# List local templates
+redc image ls -o json
+```
+
+**Output Format**
+
+On success:
+```json
+{"data": { ... }}
+```
+
+On error:
+```json
+{"error": "error message"}
+```
+
+**Scripting Examples**
+
+```bash
+# Start a case and extract the case id
+CASE_ID=$(redc run aliyun/ecs -o json | jq -r '.data.id')
+
+# Query case output information
+redc status $CASE_ID -o json | jq '.data.outputs'
+
+# Batch stop all running cases
+redc ps -o json | jq -r '.data[] | select(.state=="running") | .id' | xargs -I{} redc stop {}
+```
+
+> In JSON mode, all log output is suppressed — only a single line of JSON is written to stdout. Default text output behavior is unaffected.
+
+---
+
 ## MCP (Model Context Protocol) Support
 
 redc now supports the Model Context Protocol, enabling seamless integration with AI assistants and automation tools.

@@ -29,9 +29,17 @@ var upCmd = &cobra.Command{
 		}
 
 		if err := compose.RunComposeUp(opts); err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Fatal().Msgf(i18n.Tf("compose_up_failed", err))
 		}
 
+		if IsJSON() {
+			PrintJSONMessage("compose up completed")
+			return
+		}
 		gologger.Info().Msg(i18n.T("compose_up_done"))
 	},
 }
@@ -47,9 +55,17 @@ var downCmd = &cobra.Command{
 		}
 
 		if err := compose.RunComposeDown(opts); err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Fatal().Msgf(i18n.Tf("compose_down_failed", err))
 		}
 
+		if IsJSON() {
+			PrintJSONMessage("compose down completed")
+			return
+		}
 		gologger.Info().Msg(i18n.T("compose_down_done"))
 	},
 }
@@ -59,16 +75,17 @@ var configCmd = &cobra.Command{
 	Short: i18n.T("compose_config_short"),
 	Long:  i18n.T("compose_config_long"),
 	Run: func(cmd *cobra.Command, args []string) {
-		// 2. 构造选项
-		// profiles 是之前的全局变量 pProfiles (需要在 root.go 或 compose.go 中定义)
 		opts := compose.ComposeOptions{
-			File:     "redc-compose.yaml", // 这里建议做成可配置的 flag
-			Profiles: profiles,            // 引用全局 profile 变量
+			File:     "redc-compose.yaml",
+			Profiles: profiles,
 			Project:  redcProject,
 		}
 
-		// 3. 执行预览
 		if err := compose.InspectConfig(opts); err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Fatal().Msgf(i18n.Tf("compose_config_failed", err))
 		}
 	},

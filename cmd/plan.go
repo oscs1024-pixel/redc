@@ -26,7 +26,21 @@ var runCmd = &cobra.Command{
 		templateName := args[0]
 		if c, err := planLogic(templateName); err == nil {
 			if err := c.TfApply(); err != nil {
+				if IsJSON() {
+					PrintJSONError(err)
+					return
+				}
 				gologger.Error().Msgf(i18n.Tf("scene_start_failed", err.Error()))
+				return
+			}
+			if IsJSON() {
+				PrintJSON(map[string]interface{}{
+					"action": "run",
+					"name":   c.Name,
+					"id":     c.Id,
+					"state":  string(c.State),
+				})
+				return
 			}
 			if len(args) > 1 {
 				commandToRun = strings.Join(args[1:], " ")
@@ -44,6 +58,14 @@ var planCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		templateName := args[0]
 		if c, err := planLogic(templateName); err == nil {
+			if IsJSON() {
+				PrintJSON(map[string]interface{}{
+					"action": "plan",
+					"name":   c.Name,
+					"id":     c.Id,
+				})
+				return
+			}
 			gologger.Info().Msgf(i18n.Tf("scene_plan_done", c.Name, c.Id))
 		}
 	},
@@ -58,10 +80,16 @@ func planLogic(templateName string) (*redc.Case, error) {
 	// 创建 Case
 	c, err := redcProject.CaseCreate(templateName, userName, projectName, envVars)
 	if err != nil {
+		if IsJSON() {
+			PrintJSONError(err)
+			return nil, err
+		}
 		gologger.Error().Msgf(i18n.Tf("scene_create_failed", templateName, err.Error()))
 		return nil, err
 	}
-	gologger.Info().Msgf(i18n.Tf("scene_create_done", templateName))
+	if !IsJSON() {
+		gologger.Info().Msgf(i18n.Tf("scene_create_done", templateName))
+	}
 	return c, nil
 }
 

@@ -23,6 +23,15 @@ var tmplLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: i18n.T("tmpl_ls_short"),
 	Run: func(cmd *cobra.Command, args []string) {
+		if IsJSON() {
+			list, err := redc.ListLocalTemplates()
+			if err != nil {
+				PrintJSONError(err)
+				return
+			}
+			PrintJSON(list)
+			return
+		}
 		redc.ShowLocalTemplates()
 	},
 }
@@ -33,7 +42,15 @@ var tmplRMCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		id := args[0]
 		if err := redc.RemoveTemplate(id); err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Error().Msgf("remove template failed: %v", err)
+			return
+		}
+		if IsJSON() {
+			PrintJSONMessage("template removed: " + id)
 		}
 	},
 }

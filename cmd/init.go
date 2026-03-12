@@ -14,18 +14,44 @@ var initCmd = &cobra.Command{
 	Short: i18n.T("init_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		redc.RedcLog("执行初始化")
-		gologger.Info().Msg(i18n.T("init_running"))
+		if !IsJSON() {
+			gologger.Info().Msg(i18n.T("init_running"))
+		}
 
 		dirs, err := redc.ScanTemplateDirs(redc.TemplateDir, redc.MaxTfDepth)
 		if err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Error().Msgf(i18n.Tf("init_scan_failed", err))
 		}
+
+		type initResult struct {
+			Dir    string `json:"dir"`
+			Status string `json:"status"`
+			Error  string `json:"error,omitempty"`
+		}
+		var results []initResult
+
 		for _, v := range dirs {
 			if err := redc.TfInit(v); err != nil {
-				gologger.Error().Msgf(i18n.Tf("init_scene_failed", v, err))
+				if IsJSON() {
+					results = append(results, initResult{Dir: v, Status: "failed", Error: err.Error()})
+				} else {
+					gologger.Error().Msgf(i18n.Tf("init_scene_failed", v, err))
+				}
 			} else {
-				gologger.Info().Msgf(i18n.Tf("init_scene_done", v))
+				if IsJSON() {
+					results = append(results, initResult{Dir: v, Status: "ok"})
+				} else {
+					gologger.Info().Msgf(i18n.Tf("init_scene_done", v))
+				}
 			}
+		}
+
+		if IsJSON() {
+			PrintJSON(results)
 		}
 	},
 }

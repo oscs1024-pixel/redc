@@ -397,6 +397,58 @@ redc cp [caseid]:/root/test.txt ./
 redc change [caseid]
 ````
 
+## JSON 输出
+
+所有 CLI 命令支持 `--output json`（简写 `-o json`），输出结构化 JSON 数据，方便脚本化调用和自动化集成。
+
+**基本用法**
+
+```bash
+# 以 JSON 格式列出所有场景
+redc ps -o json
+
+# 启动场景并获取结构化结果
+redc run aliyun/ecs --output json
+
+# 查看场景状态
+redc status [caseid] -o json
+
+# 搜索模板
+redc search aliyun -o json
+
+# 列出本地模板
+redc image ls -o json
+```
+
+**输出格式**
+
+成功时返回：
+```json
+{"data": { ... }}
+```
+
+失败时返回：
+```json
+{"error": "错误信息"}
+```
+
+**脚本化调用示例**
+
+```bash
+# 启动场景并提取 case id
+CASE_ID=$(redc run aliyun/ecs -o json | jq -r '.data.id')
+
+# 查询场景输出信息
+redc status $CASE_ID -o json | jq '.data.outputs'
+
+# 批量停止所有运行中的场景
+redc ps -o json | jq -r '.data[] | select(.state=="running") | .id' | xargs -I{} redc stop {}
+```
+
+> JSON 模式下所有日志输出会被抑制，仅向 stdout 输出一行 JSON，不影响默认的文本输出行为。
+
+---
+
 ## MCP（模型上下文协议）支持
 
 redc 现已支持模型上下文协议，可与 AI 助手和自动化工具无缝集成。

@@ -34,20 +34,27 @@ var execCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			cmd.Help()
-			return // 直接 return，返回 nil，这样 main 函数就不会打印 [ERR]
+			return
 		}
 		id := args[0]
-		// 将剩余参数组合成命令
 		commandStr := strings.Join(args[1:], " ")
 
 		client, err := getSSHClient(id)
 		if err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Error().Msgf(i18n.Tf("exec_connect_failed", err))
 			return
 		}
 		defer client.Close()
 
 		if execInteractive {
+			if IsJSON() {
+				PrintJSONError(fmt.Errorf("interactive mode not supported with --output json"))
+				return
+			}
 			gologger.Info().Msgf(i18n.T("exec_interactive_starting"))
 			err = client.RunInteractiveShell(commandStr)
 		} else {
@@ -55,6 +62,10 @@ var execCmd = &cobra.Command{
 		}
 
 		if err != nil {
+			if IsJSON() {
+				PrintJSONError(err)
+				return
+			}
 			gologger.Error().Msgf(i18n.Tf("exec_error", err))
 		}
 	},
@@ -69,7 +80,7 @@ var cpCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			cmd.Help()
-			return // 直接 return，返回 nil，这样 main 函数就不会打印 [ERR]
+			return
 		}
 		srcArg := args[0]
 		destArg := args[1]
@@ -77,49 +88,82 @@ var cpCmd = &cobra.Command{
 		srcID, srcPath, srcRemote := parseCpArg(srcArg)
 		destID, destPath, destRemote := parseCpArg(destArg)
 
-		// 逻辑校验：不能两边都是远程，也不能两边都是本地 (简化版)
 		if srcRemote && destRemote {
+			if IsJSON() {
+				PrintJSONError(fmt.Errorf("remote to remote copy not supported"))
+				return
+			}
 			gologger.Error().Msg(i18n.T("cp_remote_to_remote_not_supported"))
 			return
 		}
 		if !srcRemote && !destRemote {
+			if IsJSON() {
+				PrintJSONError(fmt.Errorf("use local cp for local to local copy"))
+				return
+			}
 			gologger.Error().Msg(i18n.T("cp_use_local_cp"))
 			return
 		}
 
-		// 场景 1: 上传 (Local -> Remote)
+		// Upload
 		if !srcRemote && destRemote {
-			gologger.Info().Msgf("Uploading %s to %s:%s", srcArg, destID, destPath)
-
+			if !IsJSON() {
+				gologger.Info().Msgf("Uploading %s to %s:%s", srcArg, destID, destPath)
+			}
 			client, err := getSSHClient(destID)
 			if err != nil {
+				if IsJSON() {
+					PrintJSONError(err)
+					return
+				}
 				gologger.Error().Msgf(i18n.Tf("cp_connect_failed", err))
 				return
 			}
 			defer client.Close()
 
 			if err := client.Upload(srcArg, destPath); err != nil {
+				if IsJSON() {
+					PrintJSONError(err)
+					return
+				}
 				gologger.Error().Msgf(i18n.Tf("cp_upload_failed", err))
 			} else {
-				gologger.Info().Msg(i18n.T("cp_upload_success"))
+				if IsJSON() {
+					PrintJSON(map[string]string{"action": "upload", "src": srcArg, "dest": destID + ":" + destPath})
+				} else {
+					gologger.Info().Msg(i18n.T("cp_upload_success"))
+				}
 			}
 		}
 
-		// Scene 2: Download (Remote -> Local)
+		// Download
 		if srcRemote && !destRemote {
-			gologger.Info().Msgf("Downloading %s:%s to %s", srcID, srcPath, destArg)
-
+			if !IsJSON() {
+				gologger.Info().Msgf("Downloading %s:%s to %s", srcID, srcPath, destArg)
+			}
 			client, err := getSSHClient(srcID)
 			if err != nil {
+				if IsJSON() {
+					PrintJSONError(err)
+					return
+				}
 				gologger.Error().Msgf(i18n.Tf("cp_connect_failed", err))
 				return
 			}
 			defer client.Close()
 
 			if err := client.Download(srcPath, destArg); err != nil {
+				if IsJSON() {
+					PrintJSONError(err)
+					return
+				}
 				gologger.Error().Msgf(i18n.Tf("cp_download_failed", err))
 			} else {
-				gologger.Info().Msg(i18n.T("cp_download_success"))
+				if IsJSON() {
+					PrintJSON(map[string]string{"action": "download", "src": srcID + ":" + srcPath, "dest": destArg})
+				} else {
+					gologger.Info().Msg(i18n.T("cp_download_success"))
+				}
 			}
 		}
 	},
