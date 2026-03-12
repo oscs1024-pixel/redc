@@ -61,6 +61,7 @@
   let debugEnabled = $state(false);
   let isMaximised = $state(false);
   let isWindows = $state(false);
+  let isWebMode = $state(false); // true when running in HTTP server mode (browser)
 
   // MCP state
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
@@ -156,6 +157,9 @@
   });
 
   async function initApp() {
+    // Detect if running in HTTP server mode (browser)
+    isWebMode = !!window.__redcWebMode__;
+    
     // 检测平台
     const env = await Environment();
     isWindows = env.platform === 'windows';
@@ -313,8 +317,8 @@
         {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'aiChat'}{t.aiChat}{:else if activeTab === 'sshManager'}{t.sshManager || 'SSH 终端管理'}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
       </h1>
       <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
-        <!-- Window Controls (Windows only) -->
-        {#if isWindows}
+        <!-- Window Controls (Windows only, not in web mode) -->
+        {#if isWindows && !isWebMode}
         <div class="flex items-center ml-2 -mr-2">
           <button 
             class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"

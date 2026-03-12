@@ -206,6 +206,14 @@ export function GetDisableRightClick() {
   return window['go']['main']['App']['GetDisableRightClick']();
 }
 
+export function GetHTTPServerConfig() {
+  return window['go']['main']['App']['GetHTTPServerConfig']();
+}
+
+export function GetHTTPServerStatus() {
+  return window['go']['main']['App']['GetHTTPServerStatus']();
+}
+
 export function GetInstanceTypes(arg1, arg2) {
   return window['go']['main']['App']['GetInstanceTypes'](arg1, arg2);
 }
@@ -518,6 +526,10 @@ export function SetDisableRightClick(arg1) {
   return window['go']['main']['App']['SetDisableRightClick'](arg1);
 }
 
+export function SetHTTPServerConfig(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SetHTTPServerConfig'](arg1, arg2, arg3, arg4);
+}
+
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
 }
@@ -550,6 +562,10 @@ export function StartCustomDeployment(arg1) {
   return window['go']['main']['App']['StartCustomDeployment'](arg1);
 }
 
+export function StartHTTPServer(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartHTTPServer'](arg1, arg2, arg3);
+}
+
 export function StartMCPServer(arg1, arg2) {
   return window['go']['main']['App']['StartMCPServer'](arg1, arg2);
 }
@@ -576,6 +592,10 @@ export function StopCase(arg1) {
 
 export function StopCustomDeployment(arg1) {
   return window['go']['main']['App']['StopCustomDeployment'](arg1);
+}
+
+export function StopHTTPServer() {
+  return window['go']['main']['App']['StopHTTPServer']();
 }
 
 export function StopMCPServer() {

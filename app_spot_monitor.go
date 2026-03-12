@@ -10,8 +10,6 @@ import (
 
 	"red-cloud/i18n"
 	redc "red-cloud/mod"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // SpotMonitor periodically checks running spot instances for termination
@@ -215,7 +213,7 @@ func (m *SpotMonitor) handleTerminated(c *redc.Case, downIPs []string, totalIPs 
 	detail := fmt.Sprintf("%s (%s)", c.Name, ipList)
 
 	// Emit event to frontend
-	runtime.EventsEmit(m.app.ctx, "spot-terminated", map[string]interface{}{
+	m.app.emitEvent( "spot-terminated", map[string]interface{}{
 		"caseId":   c.Id,
 		"caseName": c.Name,
 		"template": c.Type,
@@ -257,7 +255,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 	m.app.emitLog(fmt.Sprintf("🔄 %s", i18n.Tf("app_spot_recovering", c.Name)))
 
 	// Emit recovering event
-	runtime.EventsEmit(m.app.ctx, "spot-recovering", map[string]interface{}{
+	m.app.emitEvent( "spot-recovering", map[string]interface{}{
 		"caseId":   c.Id,
 		"caseName": c.Name,
 	})
@@ -268,7 +266,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 		if m.app.notificationMgr != nil {
 			m.app.notificationMgr.SendSpotRecoverFailed(c.Name)
 		}
-		runtime.EventsEmit(m.app.ctx, "spot-recover-failed", map[string]interface{}{
+		m.app.emitEvent( "spot-recover-failed", map[string]interface{}{
 			"caseId":   c.Id,
 			"caseName": c.Name,
 			"error":    err.Error(),
@@ -281,7 +279,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 		if m.app.notificationMgr != nil {
 			m.app.notificationMgr.SendSpotRecoverFailed(c.Name)
 		}
-		runtime.EventsEmit(m.app.ctx, "spot-recover-failed", map[string]interface{}{
+		m.app.emitEvent( "spot-recover-failed", map[string]interface{}{
 			"caseId":   c.Id,
 			"caseName": c.Name,
 			"error":    err.Error(),
@@ -302,7 +300,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 		m.app.notificationMgr.SendSpotRecovered(c.Name)
 	}
 
-	runtime.EventsEmit(m.app.ctx, "spot-recovered", map[string]interface{}{
+	m.app.emitEvent( "spot-recovered", map[string]interface{}{
 		"caseId":   c.Id,
 		"caseName": c.Name,
 	})

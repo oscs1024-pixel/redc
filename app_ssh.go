@@ -548,17 +548,17 @@ func (a *App) readTerminalOutput(sessionID string, session *sshutil.TerminalSess
 		n, err := session.Read(buf)
 		if err != nil {
 			if err != io.EOF {
-				runtime.EventsEmit(a.ctx, "terminal-error-"+sessionID, err.Error())
+				a.emitEvent( "terminal-error-"+sessionID, err.Error())
 			}
 			terminalSessionsMu.Lock()
 			delete(terminalSessions, sessionID)
 			terminalSessionsMu.Unlock()
-			runtime.EventsEmit(a.ctx, "terminal-closed-"+sessionID, true)
+			a.emitEvent( "terminal-closed-"+sessionID, true)
 			break
 		}
 
 		if n > 0 {
-			runtime.EventsEmit(a.ctx, "terminal-output-"+sessionID, string(buf[:n]))
+			a.emitEvent( "terminal-output-"+sessionID, string(buf[:n]))
 		}
 	}
 }
@@ -765,7 +765,7 @@ func (a *App) StartPortForward(caseID string, localPort int, remoteHost string, 
 			portForwardSessionsMu.Lock()
 			delete(portForwardSessions, id)
 			portForwardSessionsMu.Unlock()
-			runtime.EventsEmit(a.ctx, "port-forward-closed", id)
+			a.emitEvent( "port-forward-closed", id)
 		}()
 
 		for {

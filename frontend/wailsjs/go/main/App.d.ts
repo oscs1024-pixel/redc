@@ -144,3 +144,8 @@ export function UploadUserdataScript(arg1:string,arg2:string,arg3:string):Promis
 export function ValidateDeploymentConfig(arg1:mod.DeploymentConfig):Promise<mod.ValidationResult>;
 export function WriteRemoteFileContent(arg1:string,arg2:string,arg3:string):Promise<void>;
 export function WriteToTerminal(arg1:string,arg2:string):Promise<void>;
+export function GetHTTPServerConfig():Promise<Record<string, any>>;
+export function SetHTTPServerConfig(arg1:boolean,arg2:number,arg3:string,arg4:string):Promise<void>;
+export function StartHTTPServer(arg1:number,arg2:string,arg3:string):Promise<void>;
+export function StopHTTPServer():Promise<void>;
+export function GetHTTPServerStatus():Promise<Record<string, any>>;

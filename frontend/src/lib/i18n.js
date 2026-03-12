@@ -301,6 +301,14 @@ export const i18n = {
     goToAIChat: '前往 AI 对话',
     aiChatHistory: '历史',
     aiChatNoHistory: '暂无对话历史',
+    httpServer: 'HTTP Server', httpServerDesc: '通过浏览器访问 RedC GUI（无需桌面应用）',
+    httpServerEnabled: '启用内嵌 HTTP Server', httpServerPort: '端口', httpServerHost: '监听地址',
+    httpServerToken: '访问 Token', httpServerTokenHint: '留空则自动生成', httpServerStart: '启动', httpServerStop: '停止',
+    httpServerRunning: '运行中', httpServerStopped: '未运行',
+    httpServerAccessUrl: '访问地址', httpServerCopyUrl: '复制地址', httpServerCopyToken: '复制 Token',
+    httpServerStartSuccess: 'HTTP Server 已启动', httpServerStopSuccess: 'HTTP Server 已停止',
+    httpServerStartFailed: 'HTTP Server 启动失败', httpServerStopFailed: 'HTTP Server 停止失败',
+    httpServerSaveConfig: '保存配置', httpServerSaveSuccess: '配置已保存',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -614,6 +622,14 @@ export const i18n = {
     goToAIChat: 'Go to AI Chat',
     aiChatHistory: 'History',
     aiChatNoHistory: 'No conversation history',
+    httpServer: 'HTTP Server', httpServerDesc: 'Access RedC GUI via browser (no desktop app required)',
+    httpServerEnabled: 'Enable embedded HTTP Server', httpServerPort: 'Port', httpServerHost: 'Listen host',
+    httpServerToken: 'Access Token', httpServerTokenHint: 'Leave empty to auto-generate', httpServerStart: 'Start', httpServerStop: 'Stop',
+    httpServerRunning: 'Running', httpServerStopped: 'Stopped',
+    httpServerAccessUrl: 'Access URL', httpServerCopyUrl: 'Copy URL', httpServerCopyToken: 'Copy Token',
+    httpServerStartSuccess: 'HTTP Server started', httpServerStopSuccess: 'HTTP Server stopped',
+    httpServerStartFailed: 'Failed to start HTTP Server', httpServerStopFailed: 'Failed to stop HTTP Server',
+    httpServerSaveConfig: 'Save config', httpServerSaveSuccess: 'Config saved',
   }
 };
 

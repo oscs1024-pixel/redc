@@ -1,5 +1,5 @@
 <script>
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook } from '../../../wailsjs/go/main/App.js';
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook, GetHTTPServerConfig, SetHTTPServerConfig, StartHTTPServer, StopHTTPServer, GetHTTPServerStatus } from '../../../wailsjs/go/main/App.js';
 
 let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
@@ -21,6 +21,91 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let webhookMessageType = $state('');
   let webhookTesting = $state({});
   let webhookLoaded = $state(false);
+  
+  // HTTP Server state
+  let httpForm = $state({ enabled: false, port: 8899, host: '127.0.0.1', token: '' });
+  let httpStatus = $state({ running: false, url: '', token: '' });
+  let httpSaving = $state(false);
+  let httpMessage = $state('');
+  let httpMessageType = $state('');
+  let httpLoaded = $state(false);
+  
+  async function loadHTTPServerConfig() {
+    if (httpLoaded) return;
+    try {
+      const cfg = await GetHTTPServerConfig();
+      httpForm = {
+        enabled: cfg.enabled || false,
+        port: cfg.port || 8899,
+        host: cfg.host || '127.0.0.1',
+        token: cfg.token || '',
+      };
+      const status = await GetHTTPServerStatus();
+      httpStatus = { running: status.running || false, url: status.url || '', token: status.token || '' };
+      httpLoaded = true;
+    } catch(e) {
+      console.error('Failed to load HTTP server config:', e);
+    }
+  }
+  
+  async function handleStartHTTPServer() {
+    httpMessage = '';
+    httpSaving = true;
+    try {
+      await StartHTTPServer(httpForm.port, httpForm.host, httpForm.token);
+      const status = await GetHTTPServerStatus();
+      httpStatus = { running: status.running || false, url: status.url || '', token: status.token || '' };
+      httpMessage = t.httpServerStartSuccess || 'HTTP Server started';
+      httpMessageType = 'success';
+    } catch(e) {
+      httpMessage = (t.httpServerStartFailed || 'Start failed') + ': ' + (e.message || String(e));
+      httpMessageType = 'error';
+    } finally {
+      httpSaving = false;
+      setTimeout(() => { httpMessage = ''; }, 4000);
+    }
+  }
+  
+  async function handleStopHTTPServer() {
+    httpMessage = '';
+    httpSaving = true;
+    try {
+      await StopHTTPServer();
+      httpStatus = { running: false, url: '', token: '' };
+      httpMessage = t.httpServerStopSuccess || 'HTTP Server stopped';
+      httpMessageType = 'success';
+    } catch(e) {
+      httpMessage = (t.httpServerStopFailed || 'Stop failed') + ': ' + (e.message || String(e));
+      httpMessageType = 'error';
+    } finally {
+      httpSaving = false;
+      setTimeout(() => { httpMessage = ''; }, 3000);
+    }
+  }
+  
+  async function handleSaveHTTPConfig() {
+    httpMessage = '';
+    httpSaving = true;
+    try {
+      await SetHTTPServerConfig(httpForm.enabled, httpForm.port, httpForm.host, httpForm.token);
+      httpMessage = t.httpServerSaveSuccess || 'Config saved';
+      httpMessageType = 'success';
+    } catch(e) {
+      httpMessage = String(e.message || e);
+      httpMessageType = 'error';
+    } finally {
+      httpSaving = false;
+      setTimeout(() => { httpMessage = ''; }, 3000);
+    }
+  }
+  
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+  
+  $effect(() => {
+    loadHTTPServerConfig();
+  });
   
   // Initialize forms when props change
   $effect(() => {
@@ -563,7 +648,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
           class:bg-emerald-500={webhookForm.enabled}
           class:bg-gray-300={!webhookForm.enabled}
-          onclick={() => { webhookForm.enabled = !webhookForm.enabled; }}
+          onclick={() => { webhookForm.enabled = !webhookForm.enabled; handleSaveWebhook(); }}
         >
           <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
             class:translate-x-6={webhookForm.enabled} class:translate-x-1={!webhookForm.enabled}></span>
@@ -705,6 +790,68 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
           class:translate-x-6={rightClickDisabled} class:translate-x-1={!rightClickDisabled}></span>
       </button>
+    </div>
+  </div>
+
+  <!-- HTTP Server Section -->
+  <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <div class="px-4 sm:px-5 py-3 border-b border-gray-100 bg-gray-50/50">
+      <h3 class="text-[13px] sm:text-[14px] font-semibold text-gray-700">{t.httpServer || 'HTTP Server'}</h3>
+      <p class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.httpServerDesc || 'Access RedC GUI via browser'}</p>
+    </div>
+    
+    <!-- Running status banner -->
+    {#if httpStatus.running}
+    <div class="px-4 sm:px-5 py-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between gap-2 flex-wrap">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-[12px] text-emerald-700 font-medium">{t.httpServerRunning || 'Running'}</span>
+        <span class="text-[12px] text-emerald-600">{httpStatus.url}</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button class="text-[11px] px-2 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 cursor-pointer transition-colors" onclick={() => copyToClipboard(httpStatus.url)}>{t.httpServerCopyUrl || 'Copy URL'}</button>
+        <button class="text-[11px] px-2 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 cursor-pointer transition-colors" onclick={() => copyToClipboard(httpStatus.token)}>{t.httpServerCopyToken || 'Copy Token'}</button>
+      </div>
+    </div>
+    {/if}
+    
+    <!-- Config form -->
+    <div class="px-4 sm:px-5 py-3 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">{t.httpServerHost || 'Listen host'}</label>
+          <input type="text" bind:value={httpForm.host} placeholder="127.0.0.1"
+            class="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 bg-gray-50" />
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">{t.httpServerPort || 'Port'}</label>
+          <input type="number" bind:value={httpForm.port} min="1024" max="65535" placeholder="8899"
+            class="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 bg-gray-50" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] text-gray-500 mb-1">{t.httpServerToken || 'Access Token'}</label>
+        <input type="text" bind:value={httpForm.token} placeholder={t.httpServerTokenHint || 'Leave empty to auto-generate'}
+          class="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 bg-gray-50 font-mono" />
+      </div>
+      
+      <!-- Message -->
+      {#if httpMessage}
+      <p class="text-[12px] rounded px-2 py-1" class:text-emerald-600={httpMessageType === 'success'} class:bg-emerald-50={httpMessageType === 'success'} class:text-red-600={httpMessageType === 'error'} class:bg-red-50={httpMessageType === 'error'}>{httpMessage}</p>
+      {/if}
+      
+      <!-- Action buttons -->
+      <div class="flex gap-2 pt-0.5">
+        <button onclick={handleSaveHTTPConfig} disabled={httpSaving}
+          class="px-3 py-1.5 text-[12px] rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors cursor-pointer disabled:opacity-50">{t.httpServerSaveConfig || 'Save config'}</button>
+        {#if !httpStatus.running}
+          <button onclick={handleStartHTTPServer} disabled={httpSaving}
+            class="px-3 py-1.5 text-[12px] rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors cursor-pointer disabled:opacity-50">{t.httpServerStart || 'Start'}</button>
+        {:else}
+          <button onclick={handleStopHTTPServer} disabled={httpSaving}
+            class="px-3 py-1.5 text-[12px] rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50">{t.httpServerStop || 'Stop'}</button>
+        {/if}
+      </div>
     </div>
   </div>
 </div>

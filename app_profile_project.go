@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-json"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
@@ -544,7 +543,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if r := recover(); r != nil {
 					logMsg := fmt.Sprintf("[GetBalances] recovered from panic for provider %s: %v", p, r)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				}
 			}()
@@ -558,7 +557,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
@@ -573,7 +572,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
@@ -588,7 +587,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
@@ -603,7 +602,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
@@ -618,7 +617,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
@@ -633,7 +632,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
@@ -648,7 +647,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
-					runtime.EventsEmit(a.ctx, "log", logMsg)
+					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount

@@ -36,6 +36,8 @@ type App struct {
 	templateManager         *redc.TemplateManager
 	configStore             *redc.ConfigStore
 	disableRightClick       bool
+	httpSrv                 *HTTPServer
+	wailsMode               bool // true when running inside Wails desktop
 }
 
 // NewApp creates a new App application struct
@@ -49,6 +51,7 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.wailsMode = true
 
 	// Set default values (same as CLI defaults)
 	if redc.Project == "" {
@@ -93,18 +96,18 @@ func (a *App) startup(ctx context.Context) {
 	// Initialize config using same path detection as CLI
 	if err := redc.LoadConfig(""); err != nil {
 		a.initError = i18n.Tf("app_config_load_failed2", err)
-		runtime.LogErrorf(ctx, a.initError)
+		fmt.Printf("[ERROR] %s\n", a.initError)
 		return
 	}
 	if profile, err := redc.GetActiveProfile(); err == nil {
 		if _, err := redc.SetActiveProfile(profile.ID); err != nil {
-			runtime.LogInfof(ctx, i18n.Tf("app_profile_init_failed", err))
+			fmt.Printf("[INFO] %s\n", i18n.Tf("app_profile_init_failed", err))
 		}
 	} else {
-		runtime.LogInfof(ctx, i18n.Tf("app_profile_init_failed", err))
+		fmt.Printf("[INFO] %s\n", i18n.Tf("app_profile_init_failed", err))
 	}
 
-	runtime.LogInfof(ctx, i18n.Tf("app_config_load_success", redc.RedcPath, redc.ProjectPath, redc.TemplateDir))
+	fmt.Printf("[INFO] %s\n", i18n.Tf("app_config_load_success", redc.RedcPath, redc.ProjectPath, redc.TemplateDir))
 
 	// Load default project
 	if p, err := redc.ProjectParse(redc.Project, redc.U); err == nil {
@@ -116,10 +119,10 @@ func (a *App) startup(ctx context.Context) {
 		} else {
 			gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
 		}
-		runtime.LogInfof(ctx, i18n.Tf("app_project_load_success", a.project.ProjectName))
+		fmt.Printf("[INFO] %s\n", i18n.Tf("app_project_load_success", a.project.ProjectName))
 	} else {
 		a.initError = i18n.Tf("app_project_load_failed2", err)
-		runtime.LogErrorf(ctx, a.initError)
+		fmt.Printf("[ERROR] %s\n", a.initError)
 	}
 
 	// Initialize cost estimation components
@@ -157,7 +160,7 @@ func (a *App) startup(ctx context.Context) {
 	// Start background cache cleanup (runs every hour)
 	a.pricingService.StartCacheCleanup(1 * time.Hour)
 
-	runtime.LogInfof(ctx, i18n.Tf("app_cost_init_success", pricingCacheDBPath))
+	fmt.Printf("[INFO] %s\n", i18n.Tf("app_cost_init_success", pricingCacheDBPath))
 
 	// Initialize task scheduler
 	schedulerDBPath := filepath.Join(redc.RedcPath, "scheduler.db")
@@ -165,9 +168,9 @@ func (a *App) startup(ctx context.Context) {
 
 	// 初始化数据库
 	if err := a.taskScheduler.InitDB(); err != nil {
-		runtime.LogErrorf(ctx, i18n.Tf("app_scheduler_db_init_failed", err))
+		fmt.Printf("[ERROR] %s\n", i18n.Tf("app_scheduler_db_init_failed", err))
 	} else {
-		runtime.LogInfof(ctx, i18n.Tf("app_scheduler_db_init_success", schedulerDBPath))
+		fmt.Printf("[INFO] %s\n", i18n.Tf("app_scheduler_db_init_success", schedulerDBPath))
 	}
 
 	a.taskScheduler.SetExecuteCallback(func(caseID string, action string) error {
@@ -188,26 +191,42 @@ func (a *App) startup(ctx context.Context) {
 	})
 	a.taskScheduler.Start()
 
-	runtime.LogInfof(ctx, i18n.T("app_scheduler_start_success"))
+	fmt.Printf("[INFO] %s\n", i18n.T("app_scheduler_start_success"))
 
 	// Initialize custom deployment service
 	a.customDeploymentService = redc.NewCustomDeploymentService()
 	a.templateManager = redc.NewTemplateManager()
 	a.configStore = redc.NewConfigStore()
 
-	runtime.LogInfof(ctx, i18n.T("app_deploy_service_init_success"))
+	fmt.Printf("[INFO] %s\n", i18n.T("app_deploy_service_init_success"))
 
 	// Start spot instance termination monitor (if enabled in settings)
 	if settings, err := redc.LoadGUISettings(); err == nil && settings.SpotMonitorEnabled {
 		a.spotMonitor = NewSpotMonitor(a, 120*time.Second)
 		a.spotMonitor.Start()
-		runtime.LogInfof(ctx, i18n.T("app_spot_monitor_start_success"))
+		fmt.Printf("[INFO] %s\n", i18n.T("app_spot_monitor_start_success"))
+	}
+}
+
+// startupHeadless initializes the app without Wails context
+func (a *App) startupHeadless() {
+	a.wailsMode = false
+	a.startup(context.Background())
+}
+
+// emitEvent dispatches an event to frontend (Wails or HTTP SSE)
+func (a *App) emitEvent(name string, data interface{}) {
+	if a.wailsMode && a.ctx != nil {
+		runtime.EventsEmit(a.ctx, name, data)
+	}
+	if a.httpSrv != nil {
+		a.httpSrv.broadcast(name, data)
 	}
 }
 
 // emitLog sends a log message to the frontend and writes to file
 func (a *App) emitLog(message string) {
-	runtime.EventsEmit(a.ctx, "log", message)
+	a.emitEvent("log", message)
 	// Also write to GUI log file
 	if a.logMgr != nil {
 		if logger, err := a.logMgr.NewServiceLogger("gui"); err == nil {
@@ -219,7 +238,7 @@ func (a *App) emitLog(message string) {
 
 // emitRefresh notifies the frontend to refresh data
 func (a *App) emitRefresh() {
-	runtime.EventsEmit(a.ctx, "refresh", nil)
+	a.emitEvent("refresh", nil)
 }
 
 // createLogWriter creates an io.Writer that emits logs to the frontend and writes to file

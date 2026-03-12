@@ -48,6 +48,10 @@ type GUISettings struct {
 	WebhookDiscord      string `json:"webhookDiscord"`
 	WebhookWecom        string `json:"webhookWecom"`
 	CaseTags            map[string][]string `json:"caseTags,omitempty"`
+	HTTPServerEnabled   bool   `json:"httpServerEnabled"`
+	HTTPServerPort      int    `json:"httpServerPort"`
+	HTTPServerToken     string `json:"httpServerToken"`
+	HTTPServerHost      string `json:"httpServerHost"`
 }
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加

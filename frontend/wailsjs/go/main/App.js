@@ -545,3 +545,23 @@ export function WriteRemoteFileContent(arg1, arg2, arg3) {
 export function WriteToTerminal(arg1, arg2) {
   return window['go']['main']['App']['WriteToTerminal'](arg1, arg2);
 }
+
+export function GetHTTPServerConfig() {
+  return window['go']['main']['App']['GetHTTPServerConfig']();
+}
+
+export function SetHTTPServerConfig(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SetHTTPServerConfig'](arg1, arg2, arg3, arg4);
+}
+
+export function StartHTTPServer(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartHTTPServer'](arg1, arg2, arg3);
+}
+
+export function StopHTTPServer() {
+  return window['go']['main']['App']['StopHTTPServer']();
+}
+
+export function GetHTTPServerStatus() {
+  return window['go']['main']['App']['GetHTTPServerStatus']();
+}

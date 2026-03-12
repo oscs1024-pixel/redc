@@ -108,6 +108,10 @@ export function GetDeploymentPlanPreview(arg1:string):Promise<main.PlanPreview>;
 
 export function GetDisableRightClick():Promise<boolean>;
 
+export function GetHTTPServerConfig():Promise<Record<string, any>>;
+
+export function GetHTTPServerStatus():Promise<Record<string, any>>;
+
 export function GetInstanceTypes(arg1:string,arg2:string):Promise<Array<mod.InstanceType>>;
 
 export function GetLanguage():Promise<string>;
@@ -264,6 +268,8 @@ export function SetDebugLogging(arg1:boolean):Promise<void>;
 
 export function SetDisableRightClick(arg1:boolean):Promise<void>;
 
+export function SetHTTPServerConfig(arg1:boolean,arg2:number,arg3:string,arg4:string):Promise<void>;
+
 export function SetLanguage(arg1:string):Promise<void>;
 
 export function SetNotificationEnabled(arg1:boolean):Promise<void>;
@@ -280,6 +286,8 @@ export function StartCase(arg1:string):Promise<void>;
 
 export function StartCustomDeployment(arg1:string):Promise<void>;
 
+export function StartHTTPServer(arg1:number,arg2:string,arg3:string):Promise<void>;
+
 export function StartMCPServer(arg1:string,arg2:string):Promise<void>;
 
 export function StartPortForward(arg1:string,arg2:number,arg3:string,arg4:number):Promise<main.PortForwardInfo>;
@@ -293,6 +301,8 @@ export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg
 export function StopCase(arg1:string):Promise<void>;
 
 export function StopCustomDeployment(arg1:string):Promise<void>;
+
+export function StopHTTPServer():Promise<void>;
 
 export function StopMCPServer():Promise<void>;
 

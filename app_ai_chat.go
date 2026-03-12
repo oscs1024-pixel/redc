@@ -11,8 +11,6 @@ import (
 	redc "red-cloud/mod"
 	"red-cloud/mod/ai"
 	"red-cloud/mod/mcp"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // AIChatMessage represents a single message in the AI chat conversation
@@ -89,7 +87,7 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 	defer cancel()
 
 	err = client.ChatStream(ctx, aiMessages, func(chunk string) error {
-		runtime.EventsEmit(a.ctx, "ai-chat-chunk", map[string]string{
+		a.emitEvent( "ai-chat-chunk", map[string]string{
 			"conversationId": conversationId,
 			"chunk":          chunk,
 		})
@@ -97,14 +95,14 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 	})
 
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "ai-chat-complete", map[string]interface{}{
+		a.emitEvent( "ai-chat-complete", map[string]interface{}{
 			"conversationId": conversationId,
 			"success":        false,
 		})
 		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
 	}
 
-	runtime.EventsEmit(a.ctx, "ai-chat-complete", map[string]interface{}{
+	a.emitEvent( "ai-chat-complete", map[string]interface{}{
 		"conversationId": conversationId,
 		"success":        true,
 	})
@@ -174,7 +172,7 @@ func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) e
 	for round := 0; round < maxRounds; round++ {
 		resp, err := client.ChatWithTools(ctx, aiMessages, toolDefs)
 		if err != nil {
-			runtime.EventsEmit(a.ctx, "ai-chat-complete", map[string]interface{}{
+			a.emitEvent( "ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        false,
 			})
@@ -194,12 +192,12 @@ func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) e
 				if end > len(words) {
 					end = len(words)
 				}
-				runtime.EventsEmit(a.ctx, "ai-chat-chunk", map[string]string{
+				a.emitEvent( "ai-chat-chunk", map[string]string{
 					"conversationId": conversationId,
 					"chunk":          strings.Join(words[i:end], ""),
 				})
 			}
-			runtime.EventsEmit(a.ctx, "ai-chat-complete", map[string]interface{}{
+			a.emitEvent( "ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        true,
 			})
@@ -224,7 +222,7 @@ func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) e
 			}
 
 			// Emit tool-call event to frontend
-			runtime.EventsEmit(a.ctx, "ai-agent-tool-call", map[string]interface{}{
+			a.emitEvent( "ai-agent-tool-call", map[string]interface{}{
 				"conversationId": conversationId,
 				"toolCallId":     tc.ID,
 				"toolName":       tc.Function.Name,
@@ -246,7 +244,7 @@ func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) e
 			}
 
 			// Emit result event to frontend
-			runtime.EventsEmit(a.ctx, "ai-agent-tool-result", map[string]interface{}{
+			a.emitEvent( "ai-agent-tool-result", map[string]interface{}{
 				"conversationId": conversationId,
 				"toolCallId":     tc.ID,
 				"toolName":       tc.Function.Name,
@@ -265,11 +263,11 @@ func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) e
 	}
 
 	// Exceeded max rounds
-	runtime.EventsEmit(a.ctx, "ai-chat-chunk", map[string]string{
+	a.emitEvent( "ai-chat-chunk", map[string]string{
 		"conversationId": conversationId,
 		"chunk":          "\n\n⚠️ 已达到最大工具调用轮次（10轮），操作结束。",
 	})
-	runtime.EventsEmit(a.ctx, "ai-chat-complete", map[string]interface{}{
+	a.emitEvent( "ai-chat-complete", map[string]interface{}{
 		"conversationId": conversationId,
 		"success":        true,
 	})

@@ -10,8 +10,6 @@ import (
 	redc "red-cloud/mod"
 	"red-cloud/mod/ai"
 	"red-cloud/mod/gologger"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // TemplateRecommendation represents a template recommendation result
@@ -136,7 +134,7 @@ func (a *App) AIRecommendTemplates(query string) error {
 	defer cancel()
 
 	err = client.ChatStream(ctx, messages, func(chunk string) error {
-		runtime.EventsEmit(a.ctx, "ai-recommend-chunk", chunk)
+		a.emitEvent( "ai-recommend-chunk", chunk)
 		return nil
 	})
 
@@ -144,7 +142,7 @@ func (a *App) AIRecommendTemplates(query string) error {
 		return fmt.Errorf(i18n.Tf("app_ai_recommend_failed", err))
 	}
 
-	runtime.EventsEmit(a.ctx, "ai-recommend-complete", true)
+	a.emitEvent( "ai-recommend-complete", true)
 	return nil
 }
 
@@ -183,7 +181,7 @@ func (a *App) AIGenerateTemplate(query string) error {
 	defer cancel()
 
 	err = client.ChatStream(ctx, messages, func(chunk string) error {
-		runtime.EventsEmit(a.ctx, "ai-template-gen-chunk", chunk)
+		a.emitEvent( "ai-template-gen-chunk", chunk)
 		return nil
 	})
 
@@ -191,7 +189,7 @@ func (a *App) AIGenerateTemplate(query string) error {
 		return fmt.Errorf(i18n.Tf("app_template_gen_failed", err))
 	}
 
-	runtime.EventsEmit(a.ctx, "ai-template-gen-complete", true)
+	a.emitEvent( "ai-template-gen-complete", true)
 	return nil
 }
 
@@ -407,7 +405,7 @@ func (a *App) AICostOptimization() error {
 	defer cancel()
 
 	err = client.ChatStream(ctx, messages, func(chunk string) error {
-		runtime.EventsEmit(a.ctx, "ai-cost-chunk", chunk)
+		a.emitEvent( "ai-cost-chunk", chunk)
 		return nil
 	})
 
@@ -415,7 +413,7 @@ func (a *App) AICostOptimization() error {
 		return fmt.Errorf(i18n.Tf("app_ai_cost_analysis_failed", err))
 	}
 
-	runtime.EventsEmit(a.ctx, "ai-cost-complete", true)
+	a.emitEvent( "ai-cost-complete", true)
 	return nil
 }
 
@@ -453,7 +451,7 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 
 	err = client.ChatStream(ctx, messages, func(chunk string) error {
 		gologger.Debug().Msgf("AI 分析收到 chunk: %s", chunk)
-		runtime.EventsEmit(a.ctx, "ai-deployment-error-chunk", map[string]string{
+		a.emitEvent( "ai-deployment-error-chunk", map[string]string{
 			"deploymentId": deploymentID,
 			"chunk":        chunk,
 		})
@@ -466,7 +464,7 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 	}
 
 	gologger.Info().Msgf("AI 分析完成")
-	runtime.EventsEmit(a.ctx, "ai-deployment-error-complete", map[string]interface{}{
+	a.emitEvent( "ai-deployment-error-complete", map[string]interface{}{
 		"deploymentId": deploymentID,
 		"success":      true,
 	})
@@ -504,7 +502,7 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 	defer cancel()
 
 	err = client.ChatStream(ctx, messages, func(chunk string) error {
-		runtime.EventsEmit(a.ctx, "ai-case-error-chunk", map[string]interface{}{
+		a.emitEvent( "ai-case-error-chunk", map[string]interface{}{
 			"caseId": caseName,
 			"chunk":  chunk,
 		})
@@ -512,14 +510,14 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 	})
 
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "ai-case-error-complete", map[string]interface{}{
+		a.emitEvent( "ai-case-error-complete", map[string]interface{}{
 			"caseId":  caseName,
 			"success": false,
 		})
 		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
 	}
 
-	runtime.EventsEmit(a.ctx, "ai-case-error-complete", map[string]interface{}{
+	a.emitEvent( "ai-case-error-complete", map[string]interface{}{
 		"caseId":  caseName,
 		"success": true,
 	})

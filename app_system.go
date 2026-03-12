@@ -777,3 +777,93 @@ tags = append(tags, t)
 }
 return tags
 }
+
+// GetHTTPServerConfig returns current HTTP server config
+func (a *App) GetHTTPServerConfig() map[string]interface{} {
+settings, _ := redc.LoadGUISettings()
+if settings == nil {
+return map[string]interface{}{
+"enabled": false,
+"port":    8899,
+"host":    "127.0.0.1",
+"token":   "",
+}
+}
+port := settings.HTTPServerPort
+if port == 0 {
+port = 8899
+}
+host := settings.HTTPServerHost
+if host == "" {
+host = "127.0.0.1"
+}
+return map[string]interface{}{
+"enabled": settings.HTTPServerEnabled,
+"port":    port,
+"host":    host,
+"token":   settings.HTTPServerToken,
+}
+}
+
+// SetHTTPServerConfig saves HTTP server config
+func (a *App) SetHTTPServerConfig(enabled bool, port int, host string, token string) error {
+settings, err := redc.LoadGUISettings()
+if err != nil {
+return err
+}
+settings.HTTPServerEnabled = enabled
+settings.HTTPServerPort = port
+settings.HTTPServerHost = host
+settings.HTTPServerToken = token
+return redc.SaveGUISettings(settings)
+}
+
+// StartHTTPServer starts the embedded HTTP server
+func (a *App) StartHTTPServer(port int, host string, token string) error {
+if a.httpSrv != nil {
+return fmt.Errorf("HTTP Server is already running")
+}
+if token == "" {
+token = GenerateToken()
+if settings, err := redc.LoadGUISettings(); err == nil {
+settings.HTTPServerToken = token
+settings.HTTPServerPort = port
+settings.HTTPServerHost = host
+redc.SaveGUISettings(settings)
+}
+}
+srv := NewHTTPServer(a, host, port, token)
+if err := srv.Start(assets); err != nil {
+return err
+}
+a.httpSrv = srv
+a.emitLog(fmt.Sprintf("HTTP Server 已启动: http://%s:%d (token: %s)", host, port, token))
+return nil
+}
+
+// StopHTTPServer stops the embedded HTTP server
+func (a *App) StopHTTPServer() error {
+if a.httpSrv == nil {
+return nil
+}
+err := a.httpSrv.Stop()
+a.httpSrv = nil
+a.emitLog("HTTP Server 已停止")
+return err
+}
+
+// GetHTTPServerStatus returns whether HTTP server is running and the access URL
+func (a *App) GetHTTPServerStatus() map[string]interface{} {
+if a.httpSrv == nil {
+return map[string]interface{}{
+"running": false,
+"url":     "",
+"token":   "",
+}
+}
+return map[string]interface{}{
+"running": true,
+"url":     fmt.Sprintf("http://%s:%d", a.httpSrv.host, a.httpSrv.port),
+"token":   a.httpSrv.token,
+}
+}

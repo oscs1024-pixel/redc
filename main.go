@@ -2,7 +2,12 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"os"
+	"os/signal"
 	"runtime"
+	"strings"
+	"syscall"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -16,6 +21,12 @@ import (
 var assets embed.FS
 
 func main() {
+	// Check for server subcommand
+	if len(os.Args) > 1 && os.Args[1] == "server" {
+		runServerMode()
+		return
+	}
+
 	// Create an instance of the app structure
 	app := NewApp()
 
@@ -60,4 +71,49 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+func runServerMode() {
+	port := 8899
+	host := "127.0.0.1"
+	token := ""
+
+	for i := 2; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if strings.HasPrefix(arg, "--port=") {
+			fmt.Sscanf(strings.TrimPrefix(arg, "--port="), "%d", &port)
+		} else if strings.HasPrefix(arg, "--host=") {
+			host = strings.TrimPrefix(arg, "--host=")
+		} else if strings.HasPrefix(arg, "--token=") {
+			token = strings.TrimPrefix(arg, "--token=")
+		}
+	}
+
+	if token == "" {
+		token = GenerateToken()
+	}
+
+	app := NewApp()
+	app.startupHeadless()
+
+	httpSrv := NewHTTPServer(app, host, port, token)
+	app.httpSrv = httpSrv
+
+	if err := httpSrv.Start(assets); err != nil {
+		fmt.Printf("Failed to start HTTP server: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("\n┌─────────────────────────────────────────────────────┐\n")
+	fmt.Printf("│  RedC HTTP Server 已启动                             │\n")
+	fmt.Printf("│  访问地址: http://%s:%d\n", host, port)
+	fmt.Printf("│  访问 Token: %s\n", token)
+	fmt.Printf("└─────────────────────────────────────────────────────┘\n\n")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	fmt.Println("Shutting down HTTP server...")
+	httpSrv.Stop()
 }

@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "3.1.0",
+      "date": "2026-03-15",
+      "changes": [
+        "新增：HTTP Server 模式 — 支持 `redc-gui server` 命令以无窗口模式启动，通过浏览器远程访问完整 GUI",
+        "新增：内嵌 HTTP Server — 设置页面可一键启动内嵌 HTTP Server，桌面应用与浏览器访问同时运行",
+        "新增：Bearer Token 认证 — HTTP 模式下自动生成访问 Token，支持 Authorization 头或 URL 参数传递",
+        "新增：SSE 事件推送 — 所有实时事件（日志、刷新、AI 流式输出、Terminal 输出）通过 SSE 推送到浏览器",
+        "新增：前端 HTTP Transport Polyfill — 浏览器模式自动替换 Wails 通信层，前端代码无需修改即可复用"
+      ]
+    },
+    {
       "version": "3.0.9",
       "date": "2026-03-10",
       "changes": [
