@@ -418,7 +418,7 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "exec_command",
-			Description: "Execute a command on a case",
+			Description: "Execute a command on a case via SSH. Default timeout is 5 minutes. Use the timeout parameter for long-running commands like npm install or compilation.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -429,6 +429,10 @@ func (s *MCPServer) getTools() []Tool {
 					"command": {
 						Type:        "string",
 						Description: "Command to execute",
+					},
+					"timeout": {
+						Type:        "integer",
+						Description: "Command timeout in seconds (default: 300, max: 600). Increase for long-running commands like npm install or compilation.",
 					},
 				},
 				Required: []string{"case_id", "command"},
@@ -446,6 +450,37 @@ func (s *MCPServer) getTools() []Tool {
 					},
 				},
 				Required: []string{"case_id"},
+			},
+		},
+		{
+			Name:        "list_userdata_templates",
+			Description: "List available userdata deployment scripts (pre-built install scripts for common software like nginx, docker, openclaw, etc.). Use these instead of writing install commands manually.",
+			InputSchema: ToolSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"category": {
+						Type:        "string",
+						Description: "Optional filter by category: basic, tool, ai, c2, vulhub. Empty returns all.",
+					},
+				},
+			},
+		},
+		{
+			Name:        "exec_userdata",
+			Description: "Execute a userdata deployment script on a case server. The script is uploaded and run via SSH. Use list_userdata_templates first to find available scripts.",
+			InputSchema: ToolSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"case_id": {
+						Type:        "string",
+						Description: "Case ID to execute the script on",
+					},
+					"template_name": {
+						Type:        "string",
+						Description: "Userdata template name (e.g. 'openclaw-bash', 'nginx-installation-bash')",
+					},
+				},
+				Required: []string{"case_id", "template_name"},
 			},
 		},
 		{
@@ -776,7 +811,11 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		if !ok {
 			return ToolResult{}, fmt.Errorf("missing or invalid 'command' parameter")
 		}
-		return s.toolExecCommand(caseID, command)
+		timeoutSec := 0
+		if v, ok := args["timeout"].(float64); ok {
+			timeoutSec = int(v)
+		}
+		return s.toolExecCommand(caseID, command, timeoutSec)
 
 	case "get_ssh_info":
 		caseID, ok := args["case_id"].(string)
@@ -784,6 +823,21 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 			return ToolResult{}, fmt.Errorf("missing or invalid 'case_id' parameter")
 		}
 		return s.toolGetSSHInfo(caseID)
+
+	case "list_userdata_templates":
+		category, _ := args["category"].(string)
+		return s.toolListUserdataTemplates(category)
+
+	case "exec_userdata":
+		caseID, ok := args["case_id"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'case_id' parameter")
+		}
+		templateName, ok := args["template_name"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'template_name' parameter")
+		}
+		return s.toolExecUserdata(caseID, templateName)
 
 	case "upload_file":
 		caseID, ok := args["case_id"].(string)
@@ -1249,7 +1303,7 @@ func (s *MCPServer) toolGetCaseStatus(caseID string) (ToolResult, error) {
 	}, nil
 }
 
-func (s *MCPServer) toolExecCommand(caseID string, command string) (ToolResult, error) {
+func (s *MCPServer) toolExecCommand(caseID string, command string, timeoutSec int) (ToolResult, error) {
 	c, err := s.project.GetCase(caseID)
 	if err != nil {
 		return ToolResult{}, fmt.Errorf("case not found: %v", err)
@@ -1280,7 +1334,13 @@ func (s *MCPServer) toolExecCommand(caseID string, command string) (ToolResult, 
 	session.Stderr = lw
 
 	// Run with timeout to prevent hanging on blocking commands
-	const execTimeout = 120 * time.Second
+	execTimeout := 300 * time.Second // default 5 minutes
+	if timeoutSec > 0 {
+		if timeoutSec > 600 {
+			timeoutSec = 600
+		}
+		execTimeout = time.Duration(timeoutSec) * time.Second
+	}
 	done := make(chan error, 1)
 	go func() {
 		done <- session.Run(command)
@@ -1337,6 +1397,147 @@ func (s *MCPServer) toolGetSSHInfo(caseID string) (ToolResult, error) {
 			Type: "text",
 			Text: output,
 		}},
+	}, nil
+}
+
+func (s *MCPServer) toolListUserdataTemplates(category string) (ToolResult, error) {
+	templates, err := redc.ListUserdataTemplates()
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("failed to list userdata templates: %v", err)
+	}
+
+	var filtered []*redc.UserdataTemplate
+	for _, t := range templates {
+		if category == "" || t.Category == category {
+			filtered = append(filtered, t)
+		}
+	}
+
+	if len(filtered) == 0 {
+		return ToolResult{
+			Content: []ContentItem{{Type: "text", Text: "No userdata templates found."}},
+		}, nil
+	}
+
+	output := fmt.Sprintf("Available Userdata Templates (%d):\n\n", len(filtered))
+	output += "| Name | Category | Description | Min Memory | Install Notes |\n"
+	output += "|------|----------|-------------|------------|---------------|\n"
+	for _, t := range filtered {
+		desc := t.Description
+		if t.NameZh != "" {
+			desc = t.NameZh + " - " + desc
+		}
+		notes := t.InstallNotes
+		if len(notes) > 60 {
+			notes = notes[:60] + "..."
+		}
+		memStr := "-"
+		if t.MinMemoryMB > 0 {
+			memStr = fmt.Sprintf("%dMB", t.MinMemoryMB)
+		}
+		output += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", t.Name, t.Category, desc, memStr, notes)
+	}
+	output += "\nUse exec_userdata with template_name to execute a template on a running case."
+
+	return ToolResult{
+		Content: []ContentItem{{Type: "text", Text: output}},
+	}, nil
+}
+
+func (s *MCPServer) toolExecUserdata(caseID string, templateName string) (ToolResult, error) {
+	// Find the template
+	templates, err := redc.ListUserdataTemplates()
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("failed to list userdata templates: %v", err)
+	}
+
+	var found *redc.UserdataTemplate
+	for _, t := range templates {
+		if t.Name == templateName {
+			found = t
+			break
+		}
+	}
+	if found == nil {
+		return ToolResult{}, fmt.Errorf("userdata template '%s' not found. Use list_userdata_templates to see available templates", templateName)
+	}
+
+	if found.Script == "" {
+		return ToolResult{}, fmt.Errorf("userdata template '%s' has no script content", templateName)
+	}
+
+	// Get case and execute
+	c, err := s.project.GetCase(caseID)
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("case not found: %v", err)
+	}
+
+	sshConfig, err := c.GetSSHConfig()
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("failed to get SSH config: %v", err)
+	}
+
+	client, err := sshutil.NewClient(sshConfig)
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("SSH connection failed: %v", err)
+	}
+	defer client.Close()
+
+	session, err := client.NewSession()
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("SSH session failed: %v", err)
+	}
+
+	var stdoutBuf, stderrBuf strings.Builder
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stderrBuf
+
+	shell := "/bin/bash"
+	if strings.HasPrefix(found.Script, "<powershell>") || strings.HasPrefix(found.Script, "#!/usr/bin/env pwsh") {
+		shell = "/usr/bin/env pwsh"
+	}
+
+	command := fmt.Sprintf("cat > /tmp/userdata_script.sh << 'EOFSCRIPT'\n%s\nEOFSCRIPT\nchmod +x /tmp/userdata_script.sh\n%s /tmp/userdata_script.sh", found.Script, shell)
+
+	// Run with timeout (userdata scripts can be long-running)
+	const userdataTimeout = 600 * time.Second
+	done := make(chan error, 1)
+	go func() {
+		done <- session.Run(command)
+	}()
+
+	var timedOut bool
+	select {
+	case err = <-done:
+	case <-time.After(userdataTimeout):
+		session.Signal(ssh.SIGKILL)
+		timedOut = true
+	}
+
+	stdout := stdoutBuf.String()
+	stderr := stderrBuf.String()
+
+	output := fmt.Sprintf("Executed userdata template '%s' on case '%s'\n\n", templateName, c.Name)
+	if timedOut {
+		output += fmt.Sprintf("WARNING: script timed out after %v\n\n", userdataTimeout)
+	}
+	if stdout != "" {
+		output += "STDOUT:\n" + stdout + "\n"
+	}
+	if stderr != "" {
+		output += "STDERR:\n" + stderr + "\n"
+	}
+	if err != nil {
+		output += fmt.Sprintf("Exit error: %v\n", err)
+	} else {
+		output += "Exit code: 0 (success)\n"
+	}
+	if found.InstallNotes != "" {
+		output += fmt.Sprintf("\nInstall Notes: %s\n", found.InstallNotes)
+	}
+
+	return ToolResult{
+		Content: []ContentItem{{Type: "text", Text: output}},
 	}, nil
 }
 

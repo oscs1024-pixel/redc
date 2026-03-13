@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
 
   let { t, onTabChange = () => {}, visible = true } = $props();
@@ -469,6 +469,48 @@
     }
   }
 
+  async function exportChatLog() {
+    if (messages.length === 0) return;
+    const modeLabel = modeLabels[mode] ? (t[modeLabels[mode]] || mode) : mode;
+    let md = `# RedC AI Chat Log\n\n`;
+    md += `- **Mode**: ${modeLabel}\n`;
+    md += `- **Time**: ${new Date().toLocaleString()}\n`;
+    md += `- **Messages**: ${messages.length}\n\n---\n\n`;
+
+    for (const msg of messages) {
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+      if (msg.role === 'user') {
+        md += `## 🧑 User ${time ? `(${time})` : ''}\n\n${msg.content}\n\n`;
+      } else {
+        // Tool calls first
+        if (msg.toolCalls && msg.toolCalls.length > 0) {
+          md += `### 🔧 Tool Calls\n\n`;
+          for (const tc of msg.toolCalls) {
+            const status = tc.status === 'success' ? '✅' : tc.status === 'error' ? '❌' : '⏳';
+            md += `${status} **${tc.toolName}**`;
+            if (tc.toolArgs && Object.keys(tc.toolArgs).length > 0) {
+              md += ` \`${formatToolArgs(tc.toolArgs)}\``;
+            }
+            md += `\n`;
+            if (tc.content) {
+              md += `\n<details><summary>Result</summary>\n\n\`\`\`\n${tc.content}\n\`\`\`\n\n</details>\n\n`;
+            }
+          }
+        }
+        md += `## 🤖 Assistant ${time ? `(${time})` : ''}\n\n${msg.content}\n\n`;
+      }
+      md += `---\n\n`;
+    }
+
+    try {
+      await ExportChatLog(md);
+      successMessage = t.aiChatExported || '对话日志已导出';
+      setTimeout(() => { successMessage = ''; }, 2000);
+    } catch (e) {
+      if (e) error = e.message || String(e);
+    }
+  }
+
   function formatTime(ts) {
     if (!ts) return '';
     const d = new Date(ts);
@@ -486,7 +528,10 @@
     exec_command: '执行命令', get_ssh_info: '获取 SSH 信息',
     upload_file: '上传文件', download_file: '下载文件',
     get_template_info: '模板详情', delete_template: '删除模板',
-    get_case_outputs: '获取输出', get_config: '获取配置', validate_config: '验证配置'
+    get_case_outputs: '获取输出', get_config: '获取配置', validate_config: '验证配置',
+    list_userdata_templates: '列出部署脚本', exec_userdata: '执行部署脚本',
+    save_compose_file: '保存编排文件', compose_preview: '预览编排', compose_up: '启动编排', compose_down: '销毁编排',
+    save_template_files: '保存模板文件'
   };
 
   function getToolDisplayName(name) {
@@ -535,6 +580,17 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
       </svg>
       {t.aiChatNewConversation || '新对话'}
+    </button>
+    <button
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      onclick={exportChatLog}
+      disabled={messages.length <= 1}
+      title={t.aiChatExport || '导出对话日志'}
+    >
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+      {t.aiChatExport || '导出'}
     </button>
   </div>
 

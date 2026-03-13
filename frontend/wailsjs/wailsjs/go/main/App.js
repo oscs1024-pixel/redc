@@ -162,6 +162,10 @@ export function ExecUserdata(arg1, arg2) {
   return window['go']['main']['App']['ExecUserdata'](arg1, arg2);
 }
 
+export function ExportChatLog(arg1) {
+  return window['go']['main']['App']['ExportChatLog'](arg1);
+}
+
 export function ExportConfigTemplate(arg1, arg2) {
   return window['go']['main']['App']['ExportConfigTemplate'](arg1, arg2);
 }

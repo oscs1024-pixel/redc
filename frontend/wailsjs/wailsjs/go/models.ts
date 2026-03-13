@@ -1289,6 +1289,7 @@ export namespace mod {
 	    url?: string;
 	    description?: string;
 	    installNotes?: string;
+	    minMemoryMB?: number;
 	    script: string;
 	
 	    static createFrom(source: any = {}) {
@@ -1304,6 +1305,7 @@ export namespace mod {
 	        this.url = source["url"];
 	        this.description = source["description"];
 	        this.installNotes = source["installNotes"];
+	        this.minMemoryMB = source["minMemoryMB"];
 	        this.script = source["script"];
 	    }
 	}

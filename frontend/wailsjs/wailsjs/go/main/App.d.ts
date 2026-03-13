@@ -87,6 +87,8 @@ export function ExecCommand(arg1:string,arg2:string):Promise<main.ExecCommandRes
 
 export function ExecUserdata(arg1:string,arg2:string):Promise<main.ExecCommandResult>;
 
+export function ExportChatLog(arg1:string):Promise<void>;
+
 export function ExportConfigTemplate(arg1:string,arg2:string):Promise<void>;
 
 export function ExportTemplates(arg1:Array<string>):Promise<string>;

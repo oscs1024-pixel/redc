@@ -14,6 +14,8 @@ import (
 	redc "red-cloud/mod"
 	"red-cloud/mod/ai"
 	"red-cloud/mod/mcp"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // agentCancelMap stores cancel functions for active agent conversations
@@ -158,6 +160,26 @@ func (a *App) StopAgentStream(conversationId string) {
 		delete(agentCancelMap.m, conversationId)
 	}
 	agentCancelMap.Unlock()
+}
+
+// ExportChatLog saves chat log content to a user-selected file
+func (a *App) ExportChatLog(content string) error {
+	filename := fmt.Sprintf("redc-chat-%s.md", time.Now().Format("20060102-150405"))
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "导出对话日志",
+		DefaultFilename: filename,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Markdown", Pattern: "*.md"},
+			{DisplayName: "All Files", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if filePath == "" {
+		return nil
+	}
+	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
 // runAgentLoop is the shared agentic loop used by AgentChatStream and DeployAgentChatStream

@@ -499,6 +499,7 @@ type UserdataTemplate struct {
 	URL          string `json:"url,omitempty"`
 	Description  string `json:"description,omitempty"`
 	InstallNotes string `json:"installNotes,omitempty"`
+	MinMemoryMB  int    `json:"minMemoryMB,omitempty"`
 	Script       string `json:"script"`
 	Path         string `json:"-"`
 }
