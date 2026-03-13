@@ -114,6 +114,137 @@ type ToolCallResponse struct {
 // StreamCallback is called for each chunk of the stream
 type StreamCallback func(chunk string) error
 
+// ToolStreamCallback is called for each content chunk during streaming tool calls
+type ToolStreamCallback func(chunk string) error
+
+// ChatWithToolsStream sends a streaming chat request with tool definitions.
+// Content chunks are sent to the callback in real-time. Returns the full response (content + tool_calls).
+func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, tools []ToolDefinition, callback ToolStreamCallback) (*ToolCallResponse, error) {
+	reqBody := map[string]interface{}{
+		"model":       c.Model,
+		"messages":    messages,
+		"tools":       tools,
+		"tool_choice": "auto",
+		"stream":      true,
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/chat/completions", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var contentBuilder strings.Builder
+	toolCallMap := make(map[int]*ToolCall) // index → accumulated tool call
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("failed to read stream: %w", err)
+		}
+
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		if !bytes.HasPrefix(line, []byte("data: ")) {
+			continue
+		}
+		data := bytes.TrimPrefix(line, []byte("data: "))
+		if bytes.Equal(data, []byte("[DONE]")) {
+			break
+		}
+
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content   string `json:"content"`
+					ToolCalls []struct {
+						Index    int    `json:"index"`
+						ID       string `json:"id"`
+						Type     string `json:"type"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
+				} `json:"delta"`
+			} `json:"choices"`
+		}
+		if err := json.Unmarshal(data, &chunk); err != nil {
+			continue
+		}
+		if len(chunk.Choices) == 0 {
+			continue
+		}
+
+		delta := chunk.Choices[0].Delta
+
+		// Stream content chunks to callback
+		if delta.Content != "" {
+			contentBuilder.WriteString(delta.Content)
+			if callback != nil {
+				_ = callback(delta.Content)
+			}
+		}
+
+		// Accumulate tool calls
+		for _, dtc := range delta.ToolCalls {
+			tc, ok := toolCallMap[dtc.Index]
+			if !ok {
+				tc = &ToolCall{Type: "function"}
+				toolCallMap[dtc.Index] = tc
+			}
+			if dtc.ID != "" {
+				tc.ID = dtc.ID
+			}
+			if dtc.Function.Name != "" {
+				tc.Function.Name = dtc.Function.Name
+			}
+			tc.Function.Arguments += dtc.Function.Arguments
+		}
+	}
+
+	// Build sorted tool calls list
+	var toolCalls []ToolCall
+	for i := 0; i < len(toolCallMap); i++ {
+		if tc, ok := toolCallMap[i]; ok {
+			// Fix incomplete arguments from streaming (e.g., "{" without closing "}")
+			args := strings.TrimSpace(tc.Function.Arguments)
+			if args == "" || args == "{" {
+				tc.Function.Arguments = "{}"
+			}
+			toolCalls = append(toolCalls, *tc)
+		}
+	}
+
+	return &ToolCallResponse{
+		Content:   contentBuilder.String(),
+		ToolCalls: toolCalls,
+	}, nil
+}
+
 // ChatWithTools sends a non-streaming chat request with tool definitions, returns full response
 func (c *Client) ChatWithTools(ctx context.Context, messages []Message, tools []ToolDefinition) (*ToolCallResponse, error) {
 	reqBody := map[string]interface{}{

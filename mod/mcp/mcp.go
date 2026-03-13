@@ -1265,8 +1265,11 @@ func (s *MCPServer) toolExecCommand(caseID string, command string) (ToolResult, 
 	}
 	defer session.Close()
 
-	session.Stdout = &outputBuf
-	session.Stderr = &outputBuf
+	// Limit captured output to prevent memory/context explosion
+	const maxOutputBytes = 32 * 1024 // 32KB
+	lw := &limitedWriter{w: &outputBuf, limit: maxOutputBytes}
+	session.Stdout = lw
+	session.Stderr = lw
 
 	// Run with timeout to prevent hanging on blocking commands
 	const execTimeout = 120 * time.Second
@@ -1275,8 +1278,10 @@ func (s *MCPServer) toolExecCommand(caseID string, command string) (ToolResult, 
 		done <- session.Run(command)
 	}()
 
+	var truncated bool
 	select {
 	case err := <-done:
+		truncated = lw.truncated
 		if err != nil {
 			return ToolResult{}, fmt.Errorf("command failed: %v\nOutput: %s", err, outputBuf.String())
 		}
@@ -1287,6 +1292,9 @@ func (s *MCPServer) toolExecCommand(caseID string, command string) (ToolResult, 
 
 	output := fmt.Sprintf("Command executed on case '%s' (%s):\n", c.Name, c.GetId())
 	output += fmt.Sprintf("\nOutput:\n%s", outputBuf.String())
+	if truncated {
+		output += fmt.Sprintf("\n\n... (output truncated at %d bytes, total output exceeded limit)", maxOutputBytes)
+	}
 
 	return ToolResult{
 		Content: []ContentItem{{
@@ -1970,4 +1978,27 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 	}()
 
 	return nil
+}
+
+// limitedWriter wraps an io.Writer and stops writing after a byte limit
+type limitedWriter struct {
+w         io.Writer
+limit     int
+written   int
+truncated bool
+}
+
+func (lw *limitedWriter) Write(p []byte) (int, error) {
+if lw.written >= lw.limit {
+lw.truncated = true
+return len(p), nil // discard silently
+}
+remaining := lw.limit - lw.written
+if len(p) > remaining {
+p = p[:remaining]
+lw.truncated = true
+}
+n, err := lw.w.Write(p)
+lw.written += n
+return n, err
 }

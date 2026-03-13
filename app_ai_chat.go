@@ -249,10 +249,16 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			return nil
 		}
 
-		resp, err := client.ChatWithTools(ctx, aiMessages, toolDefs)
+		// Use streaming tool call so users can see AI thinking in real-time
+		resp, err := client.ChatWithToolsStream(ctx, aiMessages, toolDefs, func(chunk string) error {
+			a.emitEvent("ai-chat-chunk", map[string]string{
+				"conversationId": conversationId,
+				"chunk":          chunk,
+			})
+			return nil
+		})
 		if err != nil {
 			if ctx.Err() != nil {
-				// Cancelled by user or timeout
 				a.emitEvent("ai-chat-chunk", map[string]string{
 					"conversationId": conversationId,
 					"chunk":          "\n\n⏹️ 操作已被用户停止。",
@@ -263,30 +269,17 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				})
 				return nil
 			}
-			a.emitEvent( "ai-chat-complete", map[string]interface{}{
+			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        false,
 			})
 			return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
 		}
 
-		// No tool calls → stream the final answer
+		// No tool calls → final answer (already streamed via callback)
 		if len(resp.ToolCalls) == 0 {
 			aiMessages = append(aiMessages, ai.Message{Role: "assistant", Content: resp.Content})
-
-			words := strings.Split(resp.Content, "")
-			chunkSize := 8
-			for i := 0; i < len(words); i += chunkSize {
-				end := i + chunkSize
-				if end > len(words) {
-					end = len(words)
-				}
-				a.emitEvent( "ai-chat-chunk", map[string]string{
-					"conversationId": conversationId,
-					"chunk":          strings.Join(words[i:end], ""),
-				})
-			}
-			a.emitEvent( "ai-chat-complete", map[string]interface{}{
+			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        true,
 			})
@@ -303,30 +296,46 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		// Execute each tool call
 		for _, tc := range resp.ToolCalls {
 			var args map[string]interface{}
+			var jsonParseErr error
 			if tc.Function.Arguments != "" {
 				if jsonErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); jsonErr != nil {
-					args = map[string]interface{}{}
+					// Streaming may produce incomplete JSON for no-arg tools; treat as empty
+					trimmed := strings.TrimSpace(tc.Function.Arguments)
+					if trimmed == "{" || trimmed == "" {
+						args = map[string]interface{}{}
+					} else {
+						jsonParseErr = jsonErr
+						args = map[string]interface{}{}
+					}
 				}
 			}
 
-			a.emitEvent( "ai-agent-tool-call", map[string]interface{}{
+			a.emitEvent("ai-agent-tool-call", map[string]interface{}{
 				"conversationId": conversationId,
 				"toolCallId":     tc.ID,
 				"toolName":       tc.Function.Name,
 				"toolArgs":       args,
 			})
 
-			result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
 			var resultContent string
-			success := execErr == nil
-			if execErr != nil {
-				resultContent = fmt.Sprintf("工具执行失败: %v", execErr)
-			} else if len(result.Content) > 0 {
-				var parts []string
-				for _, item := range result.Content {
-					parts = append(parts, item.Text)
+			var success bool
+
+			if jsonParseErr != nil {
+				// Report JSON parse failure as tool result so AI knows the root cause
+				resultContent = fmt.Sprintf("工具参数 JSON 解析失败: %v\n原始参数: %s", jsonParseErr, tc.Function.Arguments)
+				success = false
+			} else {
+				result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
+				success = execErr == nil
+				if execErr != nil {
+					resultContent = fmt.Sprintf("工具执行失败: %v", execErr)
+				} else if len(result.Content) > 0 {
+					var parts []string
+					for _, item := range result.Content {
+						parts = append(parts, item.Text)
+					}
+					resultContent = strings.Join(parts, "\n")
 				}
-				resultContent = strings.Join(parts, "\n")
 			}
 
 			// Truncate large tool results to prevent context window overflow
@@ -335,7 +344,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				resultContent = resultContent[:maxToolResultLen] + "\n\n... (output truncated, total " + fmt.Sprintf("%d", len(resultContent)) + " bytes)"
 			}
 
-			a.emitEvent( "ai-agent-tool-result", map[string]interface{}{
+			a.emitEvent("ai-agent-tool-result", map[string]interface{}{
 				"conversationId": conversationId,
 				"toolCallId":     tc.ID,
 				"toolName":       tc.Function.Name,
