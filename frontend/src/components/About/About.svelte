@@ -6,18 +6,33 @@
   
   let changelog = $state([]);
   let loading = $state(true);
+  let expandedVersions = $state(new Set());
   
   onMount(async () => {
     try {
       const res = await fetch('/changelog.json');
       const data = await res.json();
       changelog = data.changelog || [];
+      // Auto-expand the latest version
+      if (changelog.length > 0) {
+        expandedVersions = new Set([changelog[0].version]);
+      }
     } catch (e) {
       console.error('Failed to load changelog:', e);
     } finally {
       loading = false;
     }
   });
+
+  function toggleVersion(version) {
+    const next = new Set(expandedVersions);
+    if (next.has(version)) {
+      next.delete(version);
+    } else {
+      next.add(version);
+    }
+    expandedVersions = next;
+  }
 
   function openLink(url) {
     BrowserOpenURL(url);
@@ -270,21 +285,37 @@
     {:else if changelog.length === 0}
       <div class="text-sm text-gray-500">{t.noChangelog || '暂无更新日志'}</div>
     {:else}
-      <div class="space-y-4">
-        {#each changelog as item}
-          <div class="border-l-2 border-gray-100 pl-4">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">{item.version}</span>
-              <span class="text-xs text-gray-500">{item.date}</span>
-            </div>
-            <ul class="space-y-1">
-              {#each item.changes as change}
-                <li class="text-sm text-gray-600 flex items-start gap-2">
-                  <span class="text-gray-400 mt-1">•</span>
-                  <span>{change}</span>
-                </li>
-              {/each}
-            </ul>
+      <div class="space-y-2">
+        {#each changelog as item, idx}
+          <div class="border border-gray-100 rounded-lg overflow-hidden">
+            <button
+              class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
+              onclick={() => toggleVersion(item.version)}
+            >
+              <div class="flex items-center gap-2">
+                <svg
+                  class="w-4 h-4 text-gray-400 transition-transform duration-200 {expandedVersions.has(item.version) ? 'rotate-90' : ''}"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">{item.version}</span>
+                <span class="text-xs text-gray-500">{item.date}</span>
+                <span class="text-xs text-gray-400">({item.changes.length} {t.changesCount || '项更新'})</span>
+              </div>
+            </button>
+            {#if expandedVersions.has(item.version)}
+              <div class="px-4 pb-3 border-t border-gray-50">
+                <ul class="space-y-1 mt-2">
+                  {#each item.changes as change}
+                    <li class="text-sm text-gray-600 flex items-start gap-2">
+                      <span class="text-gray-400 mt-1">•</span>
+                      <span>{change}</span>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
