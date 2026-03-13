@@ -381,6 +381,10 @@ func (c *Case) TfApply() error {
 	for s, meta := range output {
 		fmt.Println(s, string(meta.Value))
 	}
+	// Save outputs to DB so SSH and other queries get fresh data
+	if c.saveHandler != nil {
+		c.saveHandler()
+	}
 	// post-apply hook
 	c.runPluginHook("post-apply")
 	return nil
