@@ -142,12 +142,12 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 
 // AgentChatStream runs the agentic loop: AI + MCP tool calling + streaming final answer
 func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) error {
-	return a.runAgentLoop(conversationId, messages, ai.AgentSystemPrompt, 20, 5*time.Minute)
+	return a.runAgentLoop(conversationId, messages, ai.AgentSystemPrompt, 50, 10*time.Minute)
 }
 
 // DeployAgentChatStream runs the deploy agent loop with specialized system prompt
 func (a *App) DeployAgentChatStream(conversationId string, messages []AIChatMessage) error {
-	return a.runAgentLoop(conversationId, messages, ai.DeployAgentSystemPrompt, 30, 10*time.Minute)
+	return a.runAgentLoop(conversationId, messages, ai.DeployAgentSystemPrompt, 50, 15*time.Minute)
 }
 
 // StopAgentStream cancels a running agent conversation
@@ -171,10 +171,13 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		return fmt.Errorf("%s", i18n.T("app_ai_config_incomplete"))
 	}
 
-	// Use user-configured max rounds if set, otherwise use default
+	// Use user-configured max rounds if set, otherwise use default (cap at 200)
 	maxRounds := defaultMaxRounds
 	if aiConfig.MaxToolRounds > 0 {
 		maxRounds = aiConfig.MaxToolRounds
+	}
+	if maxRounds > 200 {
+		maxRounds = 200
 	}
 
 	a.mu.Lock()

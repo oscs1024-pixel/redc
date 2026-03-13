@@ -596,14 +596,14 @@ let { t } = $props();
             <input 
               id="aiMaxRounds"
               type="range"
-              min="5"
-              max="50"
-              step="5"
+              min="0"
+              max="200"
+              step="10"
               class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
               bind:value={aiConfig.maxToolRounds}
               oninput={(e) => { aiConfig.maxToolRounds = parseInt(e.target.value); }}
             />
-            <span class="text-[12px] font-mono text-gray-700 w-8 text-center">{aiConfig.maxToolRounds || 20}</span>
+            <span class="text-[12px] font-mono text-gray-700 w-8 text-center">{aiConfig.maxToolRounds || 50}</span>
           </div>
           <p class="text-[10px] text-gray-500 mt-1">{t.aiMaxToolRoundsHint || 'Agent/开源部署模式下的最大工具调用轮次，0 为使用默认值'}</p>
         </div>
