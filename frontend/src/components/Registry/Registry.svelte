@@ -110,25 +110,37 @@ let { t } = $props();
     return result;
   }
 
+  // Filter tab state
+  let filterTab = $state('all'); // 'all' | 'installed' | 'notInstalled' | 'updatable'
+
   // Batch operation state
   let selectedTemplates = $state(new Set());
   let batchOperating = $state(false);
   let batchPullConfirm = $state({ show: false, count: 0 });
   let batchUpdateConfirm = $state({ show: false, count: 0 });
 
+  // Stats
+  let installedCount = $derived(registryTemplates.filter(t => t.installed).length);
+  let updatableCount = $derived(registryTemplates.filter(t => t.installed && hasUpdate(t)).length);
+  let notInstalledCount = $derived(registryTemplates.filter(t => !t.installed).length);
+
   let filteredRegistryTemplates = $derived(registryTemplates
-    .filter(t => 
-      !registrySearch || 
-      t.name.toLowerCase().includes(registrySearch.toLowerCase()) ||
-      (t.author && t.author.toLowerCase().includes(registrySearch.toLowerCase())) ||
-      (t.description && t.description.toLowerCase().includes(registrySearch.toLowerCase())) ||
-      (t.tags && t.tags.some(tag => tag.toLowerCase().includes(registrySearch.toLowerCase())))
-    )
+    .filter(t => {
+      // Tab filter
+      if (filterTab === 'installed' && !t.installed) return false;
+      if (filterTab === 'notInstalled' && t.installed) return false;
+      if (filterTab === 'updatable' && !(t.installed && hasUpdate(t))) return false;
+      // Search filter
+      if (!registrySearch) return true;
+      const q = registrySearch.toLowerCase();
+      return t.name.toLowerCase().includes(q) ||
+        (t.author && t.author.toLowerCase().includes(q)) ||
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.tags && t.tags.some(tag => tag.toLowerCase().includes(q)));
+    })
     .sort((a, b) => {
-      // Installed templates first
       if (a.installed && !b.installed) return -1;
       if (!a.installed && b.installed) return 1;
-      // Then sort by name alphabetically
       return a.name.localeCompare(b.name);
     }));
 
@@ -138,19 +150,18 @@ let { t } = $props();
 
   let hasSelection = $derived(selectedTemplates.size > 0);
 
-
-  // Get templates that can be pulled (not installed)
   let canPullTemplates = $derived(Array.from(selectedTemplates).filter(name => {
     const tmpl = registryTemplates.find(t => t.name === name);
     return tmpl && !tmpl.installed;
   }));
 
-
-  // Get templates that can be updated (installed and has update)
   let canUpdateTemplates = $derived(Array.from(selectedTemplates).filter(name => {
     const tmpl = registryTemplates.find(t => t.name === name);
     return tmpl && tmpl.installed && hasUpdate(tmpl);
   }));
+
+  // All updatable templates (for "update all" shortcut)
+  let allUpdatableTemplates = $derived(registryTemplates.filter(t => t.installed && hasUpdate(t)).map(t => t.name));
 
 
   function setRegistryNotice(type, message, autoClear = true) {
@@ -311,6 +322,32 @@ let { t } = $props();
     }
   }
 
+  async function handleUpdateAll() {
+    if (allUpdatableTemplates.length === 0) return;
+    batchUpdateConfirm = { show: true, count: allUpdatableTemplates.length };
+    // Override confirmBatchUpdate to use allUpdatableTemplates
+    _updateAllMode = true;
+  }
+
+  let _updateAllMode = $state(false);
+
+  async function doConfirmBatchUpdate() {
+    batchUpdateConfirm = { show: false, count: 0 };
+    batchOperating = true;
+    const targets = _updateAllMode ? allUpdatableTemplates : canUpdateTemplates;
+    _updateAllMode = false;
+
+    try {
+      await Promise.all(targets.map(name => handlePullTemplate(name, true)));
+      selectedTemplates = new Set();
+    } catch (e) {
+      setRegistryNotice('error', e.message || String(e));
+    } finally {
+      batchOperating = false;
+      await loadRegistryTemplates();
+    }
+  }
+
   onMount(() => {
     loadRegistryTemplates();
   });
@@ -329,51 +366,92 @@ let { t } = $props();
 
 </script>
 
-<div class="space-y-5">
-  <!-- Search -->
-  <div class="bg-white rounded-xl border border-gray-100 p-5">
-    <div class="flex items-center gap-4">
-      <div class="flex-1 relative">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input 
-          type="text" 
-          placeholder={t.search}
-          class="w-full h-10 pl-10 pr-4 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-          bind:value={registrySearch} 
-        />
-      </div>
+<div class="space-y-4">
+  <!-- Toolbar: search + actions -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+    <div class="flex-1 relative w-full sm:w-auto">
+      <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input 
+        type="text" 
+        placeholder={t.search}
+        class="w-full h-9 pl-10 pr-4 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+        bind:value={registrySearch} 
+      />
+    </div>
+    <div class="flex items-center gap-2">
+      {#if updatableCount > 0}
+        <button 
+          class="h-9 px-3.5 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+          onclick={handleUpdateAll}
+          disabled={batchOperating}
+        >
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          {t.updateAll || '全部更新'} ({updatableCount})
+        </button>
+      {/if}
       <button 
-        class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        class="h-9 px-3.5 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
         onclick={toggleSelectAll}
         disabled={registryLoading || filteredRegistryTemplates.length === 0}
       >
         {allSelected ? t.clearSelection : t.selectAll || '全选'}
       </button>
       <button 
-        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-3.5 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
         onclick={loadRegistryTemplates}
         disabled={registryLoading}
       >
+        <svg class="w-3.5 h-3.5 {registryLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
         {registryLoading ? t.loading : t.refreshRepo}
       </button>
     </div>
-    {#if registryNotice.message}
-      <div class="mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px]
-        {registryNotice.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : registryNotice.type === 'error' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">
-        {#if registryNotice.type === 'info'}
-          <div class="w-3.5 h-3.5 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
-        {/if}
-        <span class="flex-1 truncate">{registryNotice.message}</span>
-        <button class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" onclick={() => setRegistryNotice('', '')} aria-label="关闭通知">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    {/if}
   </div>
+
+  <!-- Filter tabs + stats -->
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+      <button 
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { filterTab = 'all'; selectedTemplates = new Set(); }}
+      >{t.filterAll || '全部'} ({registryTemplates.length})</button>
+      <button 
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'installed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { filterTab = 'installed'; selectedTemplates = new Set(); }}
+      >{t.installed} ({installedCount})</button>
+      <button 
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'notInstalled' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { filterTab = 'notInstalled'; selectedTemplates = new Set(); }}
+      >{t.notInstalled || '未安装'} ({notInstalledCount})</button>
+      {#if updatableCount > 0}
+        <button 
+          class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'updatable' ? 'bg-white text-gray-900 shadow-sm' : 'text-amber-600 hover:text-amber-700'}"
+          onclick={() => { filterTab = 'updatable'; selectedTemplates = new Set(); }}
+        >{t.updatable || '可更新'} ({updatableCount})</button>
+      {/if}
+    </div>
+    <div class="text-[11px] text-gray-400">
+      {registryTemplates.length} {t.templates || '模板'} · {installedCount} {t.installed}
+      {#if updatableCount > 0}
+        · <span class="text-amber-500">{updatableCount} {t.updatable || '可更新'}</span>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Notice -->
+  {#if registryNotice.message}
+    <div class="flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px]
+      {registryNotice.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : registryNotice.type === 'error' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">
+      {#if registryNotice.type === 'info'}
+        <div class="w-3.5 h-3.5 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+      {/if}
+      <span class="flex-1 truncate">{registryNotice.message}</span>
+      <button class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" onclick={() => setRegistryNotice('', '')} aria-label="close">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+  {/if}
 
   {#if registryError}
     <div class="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
@@ -381,10 +459,8 @@ let { t } = $props();
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{registryError}</span>
-      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => registryError = ''} aria-label="关闭错误">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => registryError = ''} aria-label="close">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>
   {/if}
@@ -396,122 +472,119 @@ let { t } = $props();
   {:else}
     <!-- Batch Operations Bar -->
     {#if hasSelection}
-      <div class="bg-white rounded-xl border border-gray-100 p-5 mb-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-[13px] font-medium text-blue-900">
-              {t.selected} {selectedTemplates.size} {t.items}
-            </span>
+      <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2.5">
+        <div class="flex items-center gap-3">
+          <span class="text-[12px] font-medium text-gray-700">
+            {t.selected} {selectedTemplates.size} {t.items}
+          </span>
+          <button
+            class="text-[11px] text-gray-500 hover:text-gray-700 underline cursor-pointer"
+            onclick={() => { selectedTemplates = new Set(); }}
+          >{t.clearSelection}</button>
+        </div>
+        <div class="flex items-center gap-2">
+          {#if canPullTemplates.length > 0}
             <button
-              class="text-[12px] text-blue-600 hover:text-blue-800 underline"
-              onclick={() => { selectedTemplates = new Set(); }}
-            >
-              {t.clearSelection}
-            </button>
-          </div>
-          <div class="flex items-center gap-2">
-            {#if canPullTemplates.length > 0}
-              <button
-                class="px-3 py-1.5 text-[12px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
-                onclick={showBatchPullConfirm}
-                disabled={batchOperating}
-              >
-                {t.batchPull} ({canPullTemplates.length})
-              </button>
-            {/if}
-            {#if canUpdateTemplates.length > 0}
-              <button
-                class="px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors disabled:opacity-50"
-                onclick={showBatchUpdateConfirm}
-                disabled={batchOperating}
-              >
-                {t.batchUpdate} ({canUpdateTemplates.length})
-              </button>
-            {/if}
-          </div>
+              class="px-3 h-7 text-[11px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer"
+              onclick={showBatchPullConfirm}
+              disabled={batchOperating}
+            >{t.batchPull} ({canPullTemplates.length})</button>
+          {/if}
+          {#if canUpdateTemplates.length > 0}
+            <button
+              class="px-3 h-7 text-[11px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer"
+              onclick={showBatchUpdateConfirm}
+              disabled={batchOperating}
+            >{t.batchUpdate} ({canUpdateTemplates.length})</button>
+          {/if}
         </div>
       </div>
     {/if}
 
     <!-- Template Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {#each filteredRegistryTemplates as tmpl}
-        <div class="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow relative">
-          <!-- Checkbox -->
-          <div class="absolute top-4 left-4">
-            <input
-              type="checkbox"
-              class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
-              checked={selectedTemplates.has(tmpl.name)}
-              onchange={() => toggleSelectTemplate(tmpl.name)}
-              onclick={(e) => e.stopPropagation()}
-            />
-          </div>
-          
-          <div class="pl-6">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex-1 min-w-0">
-                <h3 class="text-[14px] font-semibold text-gray-900 truncate">{tmpl.name}</h3>
-                <p class="text-[12px] text-gray-500 mt-0.5">v{tmpl.latest}</p>
-              </div>
-              {#if tmpl.installed}
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[11px] font-medium rounded-full">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {t.installed}
-                </span>
-              {/if}
+        <div class="bg-white rounded-xl border {tmpl.installed ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'} p-4 hover:shadow-md transition-shadow">
+          <div class="flex gap-3">
+            <!-- Checkbox -->
+            <div class="pt-0.5 flex-shrink-0">
+              <input
+                type="checkbox"
+                class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
+                checked={selectedTemplates.has(tmpl.name)}
+                onchange={() => toggleSelectTemplate(tmpl.name)}
+                onclick={(e) => e.stopPropagation()}
+              />
             </div>
-            
-            {#if tmpl.description}
-              <p class="text-[12px] text-gray-600 mb-3 line-clamp-2">{tmpl.description}</p>
-            {/if}
-            
-            {#if tmpl.tags && tmpl.tags.length > 0}
-              <div class="flex flex-wrap gap-1 mb-3">
-                {#each tmpl.tags.slice(0, 3) as tag}
-                  <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-full">{tag}</span>
-                {/each}
-                {#if tmpl.tags.length > 3}
-                  <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">+{tmpl.tags.length - 3}</span>
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1 min-w-0">
+                  <h3 class="text-[13px] font-semibold text-gray-900 truncate">{tmpl.name}</h3>
+                  <p class="text-[11px] text-gray-400 mt-0.5">v{tmpl.latest}</p>
+                </div>
+                {#if tmpl.installed}
+                  {#if hasUpdate(tmpl)}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-medium rounded-full flex-shrink-0">
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      {t.updatable || '可更新'}
+                    </span>
+                  {:else}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-medium rounded-full flex-shrink-0">
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      {t.installed}
+                    </span>
+                  {/if}
                 {/if}
               </div>
-            {/if}
-            
-            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-              <div class="text-[11px] text-gray-500">
-                {#if tmpl.author}by {tmpl.author}{/if}
-                {#if tmpl.installed && hasUpdate(tmpl)}
-                  <span class="ml-2 text-amber-600">
-                    v{tmpl.localVersion} → v{tmpl.latest}
-                  </span>
-                {/if}
-              </div>
-              {#if pullingTemplates[tmpl.name]}
-                <span class="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-amber-600">
-                  <span class="w-3 h-3 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></span>
-                  {t.pulling}
-                </span>
-              {:else}
-                <div class="flex gap-2">
-                  <button 
-                    class="px-3 py-1.5 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    onclick={() => handleShowReadme(tmpl.name)}
-                  >{t.viewReadme || '查看'}</button>
-                  {#if tmpl.installed && hasUpdate(tmpl)}
-                    <button 
-                      class="px-3 py-1.5 text-[12px] font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      onclick={() => handlePullTemplate(tmpl.name, true)}
-                    >{t.update}</button>
-                  {:else if !tmpl.installed}
-                    <button 
-                      class="px-3 py-1.5 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
-                      onclick={() => handlePullTemplate(tmpl.name, false)}
-                    >{t.pull}</button>
+              
+              {#if tmpl.description}
+                <p class="text-[11px] text-gray-500 mb-2 line-clamp-2">{tmpl.description}</p>
+              {/if}
+              
+              {#if tmpl.tags && tmpl.tags.length > 0}
+                <div class="flex flex-wrap gap-1 mb-2">
+                  {#each tmpl.tags.slice(0, 3) as tag}
+                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded">{tag}</span>
+                  {/each}
+                  {#if tmpl.tags.length > 3}
+                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded">+{tmpl.tags.length - 3}</span>
                   {/if}
                 </div>
               {/if}
+              
+              <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div class="text-[10px] text-gray-400">
+                  {#if tmpl.author}by {tmpl.author}{/if}
+                  {#if tmpl.installed && hasUpdate(tmpl)}
+                    <span class="ml-1.5 text-amber-500 font-medium">v{tmpl.localVersion} → v{tmpl.latest}</span>
+                  {/if}
+                </div>
+                {#if pullingTemplates[tmpl.name]}
+                  <span class="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
+                    <span class="w-3 h-3 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></span>
+                    {t.pulling}
+                  </span>
+                {:else}
+                  <div class="flex gap-1.5">
+                    <button 
+                      class="px-2.5 h-7 text-[11px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors cursor-pointer"
+                      onclick={() => handleShowReadme(tmpl.name)}
+                    >{t.viewReadme || '查看'}</button>
+                    {#if tmpl.installed && hasUpdate(tmpl)}
+                      <button 
+                        class="px-2.5 h-7 text-[11px] font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors cursor-pointer"
+                        onclick={() => handlePullTemplate(tmpl.name, true)}
+                      >{t.update}</button>
+                    {:else if !tmpl.installed}
+                      <button 
+                        class="px-2.5 h-7 text-[11px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors cursor-pointer"
+                        onclick={() => handlePullTemplate(tmpl.name, false)}
+                      >{t.pull}</button>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
             </div>
           </div>
         </div>
@@ -520,13 +593,16 @@ let { t } = $props();
           <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
           </svg>
-          <p class="text-[13px] text-gray-500">
-            {#if registrySearch}
-              {t.noMatch}
-            {:else}
-              {t.clickRefresh}
-            {/if}
-          </p>
+          {#if registrySearch}
+            <p class="text-[13px] text-gray-500 mb-2">{t.noMatch}</p>
+            <button class="text-[12px] text-gray-500 hover:text-gray-700 underline cursor-pointer" onclick={() => registrySearch = ''}>{t.clearSearch || '清除搜索'}</button>
+          {:else if filterTab !== 'all'}
+            <p class="text-[13px] text-gray-500 mb-2">{t.noMatchFilter || '当前筛选无结果'}</p>
+            <button class="text-[12px] text-gray-500 hover:text-gray-700 underline cursor-pointer" onclick={() => filterTab = 'all'}>{t.showAll || '显示全部'}</button>
+          {:else}
+            <p class="text-[13px] text-gray-500 mb-2">{t.clickRefresh}</p>
+            <button class="mt-2 h-8 px-4 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer" onclick={loadRegistryTemplates}>{t.refreshRepo}</button>
+          {/if}
         </div>
       {/each}
     </div>
@@ -596,7 +672,7 @@ let { t } = $props();
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-          onclick={confirmBatchUpdate}
+          onclick={doConfirmBatchUpdate}
         >{t.update}</button>
       </div>
     </div>
