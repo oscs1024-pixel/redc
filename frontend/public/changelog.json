@@ -13,7 +13,8 @@
         "修复：exec_command 超时 — 默认超时从 120s 提升到 300s，新增可选 timeout 参数（最大 600s）",
         "修复：exec_userdata 超时 — 添加 10 分钟超时保护，防止 session.Run() 永久挂起",
         "修复：openclaw-bash userdata 模板 — 修复 bullseye-backports apt 源 404、添加 apt lock 等待循环、设置 DEBIAN_FRONTEND=noninteractive",
-        "修复：UserdataTemplate 最小内存 — 新增 minMemoryMB 字段，openclaw-bash 设置 4096MB，防止 Agent 选择低配实例导致 OOM"
+        "修复：UserdataTemplate 最小内存 — 新增 minMemoryMB 字段，openclaw-bash 设置 4096MB，防止 Agent 选择低配实例导致 OOM",
+        "优化：模板选择搜索 — 预定义场景的模板下拉框替换为可搜索组合框，支持输入关键词实时过滤模板列表，快速定位目标模板"
       ]
     },
     {

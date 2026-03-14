@@ -25,7 +25,7 @@
     loading = true;
     error = '';
     try {
-      plugins = await ListPlugins() || [];
+      plugins = (await ListPlugins() || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } catch (e) {
       error = e?.message || String(e);
     } finally {
@@ -103,16 +103,42 @@
   async function showConfig(p) {
     try {
       const configStr = await GetPluginConfig(p.name);
+      const schema = p.config_schema || {};
+      let parsed = {};
+      try { parsed = JSON.parse(configStr || '{}') || {}; } catch { parsed = {}; }
+      // Build form values from schema + existing config
+      const formValues = {};
+      for (const [key, field] of Object.entries(schema)) {
+        if (parsed[key] !== undefined) {
+          formValues[key] = parsed[key];
+        } else if (field.default !== undefined && field.default !== '') {
+          formValues[key] = field.type === 'boolean' ? (field.default === 'true') : field.default;
+        } else {
+          formValues[key] = field.type === 'boolean' ? false : '';
+        }
+      }
+      // Keep extra keys not in schema
+      for (const [key, val] of Object.entries(parsed)) {
+        if (!(key in formValues)) formValues[key] = val;
+      }
       configModal = {
         show: true,
         plugin: p,
         config: configStr || '{}',
-        schema: p.config_schema || {},
-        saving: false
+        schema,
+        saving: false,
+        formValues,
+        useForm: Object.keys(schema).length > 0
       };
     } catch (e) {
       error = e?.message || String(e);
     }
+  }
+
+  function updateConfigFormValue(key, value) {
+    configModal.formValues = { ...configModal.formValues, [key]: value };
+    // Sync to JSON string
+    configModal.config = JSON.stringify(configModal.formValues, null, 2);
   }
 
   async function saveConfig() {
@@ -455,35 +481,70 @@
 
 <!-- Config Modal -->
 {#if configModal.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false }}>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false, formValues: {}, useForm: false }}>
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4" onclick={(e) => e.stopPropagation()}>
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-sm font-medium text-gray-900">{t.pluginConfig || '插件配置'} — {configModal.plugin?.name}</h3>
-        <button class="text-gray-400 hover:text-gray-600 cursor-pointer" onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false }}>✕</button>
+        <button class="text-gray-400 hover:text-gray-600 cursor-pointer" onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false, formValues: {}, useForm: false }}>✕</button>
       </div>
       <div class="p-4">
-        {#if configModal.schema && Object.keys(configModal.schema).length > 0}
-          <div class="text-xs text-gray-500 mb-3">{t.pluginConfigFields || '配置字段'}:</div>
-          <div class="space-y-1 mb-3">
+        {#if configModal.useForm && configModal.schema}
+          <div class="space-y-3">
             {#each Object.entries(configModal.schema) as [key, field]}
-              <div class="text-xs text-gray-400">
-                <span class="font-mono text-gray-600">{key}</span>
-                {#if field.required}<span class="text-red-400">*</span>{/if}
-                — {field.description || field.type}
+              <div>
+                <label class="block text-[12px] font-medium text-gray-700 mb-1">
+                  {key}
+                  {#if field.required}<span class="text-red-500 ml-0.5">*</span>{/if}
+                  {#if field.type && field.type !== 'string'}
+                    <span class="text-gray-300 ml-1 text-[10px]">{field.type}</span>
+                  {/if}
+                </label>
+                {#if field.description}
+                  <div class="text-[11px] text-gray-400 mb-1">{field.description}</div>
+                {/if}
+                {#if field.type === 'boolean'}
+                  <button
+                    type="button"
+                    class="h-8 flex items-center gap-2 px-3 rounded-lg bg-gray-50 cursor-pointer"
+                    onclick={() => updateConfigFormValue(key, !(configModal.formValues[key] === true || configModal.formValues[key] === 'true'))}
+                  >
+                    <div class="relative w-8 h-[18px] rounded-full transition-colors {(configModal.formValues[key] === true || configModal.formValues[key] === 'true') ? 'bg-gray-900' : 'bg-gray-300'}">
+                      <div class="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform {(configModal.formValues[key] === true || configModal.formValues[key] === 'true') ? 'translate-x-[16px]' : 'translate-x-[2px]'}"></div>
+                    </div>
+                    <span class="text-[12px] text-gray-600">{(configModal.formValues[key] === true || configModal.formValues[key] === 'true') ? 'true' : 'false'}</span>
+                  </button>
+                {:else if field.type === 'number'}
+                  <input
+                    type="number"
+                    class="w-full h-9 px-3 text-[13px] bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    placeholder={field.default || ''}
+                    value={configModal.formValues[key] ?? ''}
+                    oninput={(e) => updateConfigFormValue(key, e.currentTarget.value ? Number(e.currentTarget.value) : '')}
+                  />
+                {:else}
+                  <input
+                    type="text"
+                    class="w-full h-9 px-3 text-[13px] bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    placeholder={field.default || ''}
+                    value={configModal.formValues[key] ?? ''}
+                    oninput={(e) => updateConfigFormValue(key, e.currentTarget.value)}
+                  />
+                {/if}
               </div>
             {/each}
           </div>
+        {:else}
+          <textarea
+            bind:value={configModal.config}
+            rows="8"
+            class="w-full px-3 py-2 text-sm font-mono border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-none"
+            placeholder="JSON config..."
+          ></textarea>
         {/if}
-        <textarea
-          bind:value={configModal.config}
-          rows="8"
-          class="w-full px-3 py-2 text-sm font-mono border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-none"
-          placeholder="JSON config..."
-        ></textarea>
       </div>
       <div class="px-4 py-3 border-t border-gray-100 flex justify-end gap-2">
         <button
-          onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false }}
+          onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false, formValues: {}, useForm: false }}
           class="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
         >{t.cancel || '取消'}</button>
         <button

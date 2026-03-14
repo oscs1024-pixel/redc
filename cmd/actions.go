@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
+	"red-cloud/mod/plugin"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
@@ -99,6 +103,80 @@ func runStatusJSON(c *redc.Case) {
 	PrintJSON(result)
 }
 
+// runGlobalStatus shows a global overview: case counts by state, scheduled tasks, plugins
+func runGlobalStatus() {
+	cases, err := redc.LoadProjectCases(redc.Project)
+	if err != nil {
+		if IsJSON() {
+			PrintJSONError(err)
+		} else {
+			gologger.Error().Msgf("Failed to load cases: %v", err)
+		}
+		return
+	}
+
+	// Count by state
+	counts := map[string]int{
+		"running": 0,
+		"stopped": 0,
+		"error":   0,
+		"created": 0,
+	}
+	for _, c := range cases {
+		state := string(c.State)
+		if state == "" {
+			state = "unknown"
+		}
+		counts[state]++
+	}
+
+	// Scheduled tasks
+	pendingTasks := 0
+	schedulerDB := filepath.Join(redc.RedcPath, "scheduler.db")
+	if scheduler := redc.NewTaskScheduler(redcProject, schedulerDB); scheduler != nil {
+		pendingTasks = len(scheduler.ListTasks())
+		scheduler.Stop()
+	}
+
+	// Plugins
+	pluginsDir := filepath.Join(redc.RedcPath, "plugins")
+	pm := plugin.NewPluginManager(pluginsDir)
+	_ = pm.LoadAll()
+	allPlugins := pm.List()
+	enabledPlugins := 0
+	for _, p := range allPlugins {
+		if p.Enabled {
+			enabledPlugins++
+		}
+	}
+
+	if IsJSON() {
+		PrintJSON(map[string]interface{}{
+			"project":         redc.Project,
+			"total_cases":     len(cases),
+			"cases_by_state":  counts,
+			"pending_tasks":   pendingTasks,
+			"total_plugins":   len(allPlugins),
+			"enabled_plugins": enabledPlugins,
+		})
+		return
+	}
+
+	// Pretty print
+	fmt.Printf("\n  RedC Status — Project: %s\n\n", redc.Project)
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
+	fmt.Fprintf(w, "  %-20s\t%d\n", i18n.T("status_total_cases"), len(cases))
+	fmt.Fprintf(w, "  %-20s\t%d\n", "  ● "+i18n.T("status_running"), counts["running"])
+	fmt.Fprintf(w, "  %-20s\t%d\n", "  ○ "+i18n.T("status_stopped"), counts["stopped"])
+	fmt.Fprintf(w, "  %-20s\t%d\n", "  ✕ "+i18n.T("status_error"), counts["error"])
+	fmt.Fprintf(w, "  %-20s\t%d\n", "  ◻ "+i18n.T("status_created"), counts["created"])
+	fmt.Fprintf(w, "  %-20s\t%d\n", i18n.T("status_pending_tasks"), pendingTasks)
+	fmt.Fprintf(w, "  %-20s\t%d / %d\n", i18n.T("status_plugins"), enabledPlugins, len(allPlugins))
+	w.Flush()
+	fmt.Println()
+}
+
 // 定义各个命令
 var stopCmd = &cobra.Command{
 	Use:   "stop [id]",
@@ -112,6 +190,10 @@ var statusCmd = &cobra.Command{
 	Use:   "status [id]",
 	Short: i18n.T("status_short"),
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			runGlobalStatus()
+			return
+		}
 		runAction("status", args[0])
 	},
 }
