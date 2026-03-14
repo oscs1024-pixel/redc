@@ -21,6 +21,9 @@ let { t } = $props();
   let profileError = $state('');
   let error = $state('');
   let saveConfirm = $state({ show: false, providerName: '' });
+  let securityDismissed = $state(false);
+  let providerSearch = $state('');
+  let showProfileDetails = $state(false);
 
   // AI Configuration state
   let aiConfig = $state({
@@ -345,6 +348,28 @@ let { t } = $props();
     return secrets.includes(key);
   }
 
+  function isProviderConfigured(provider) {
+    if (!provider || !provider.fields) return false;
+    return Object.entries(provider.fields).some(([key, v]) => {
+      if (!v || v === '') return false;
+      if (key === 'region') return false; // region 为空不影响配置状态
+      return true; // 包括 *** 遮罩值，说明已配置
+    });
+  }
+
+  let filteredProviders = $derived(
+    (providersConfig.providers || []).filter(p => {
+      if (!providerSearch) return true;
+      const q = providerSearch.toLowerCase();
+      const name = (t[p.name] || p.name || '').toLowerCase();
+      return name.includes(q) || p.name.toLowerCase().includes(q);
+    })
+  );
+
+  let configuredCount = $derived(
+    (providersConfig.providers || []).filter(isProviderConfigured).length
+  );
+
   onMount(() => {
     loadProfiles();
     loadProvidersConfig();
@@ -366,12 +391,19 @@ let { t } = $props();
         <h3 class="text-[14px] font-semibold text-gray-900">{t.profileManage}</h3>
         <p class="text-[12px] text-gray-500">{t.profileHint}</p>
       </div>
-      <div class="text-[12px] text-gray-500">
-        {t.activeProfile}: <span class="font-medium text-gray-700">{profiles.find(p => p.id === activeProfileId)?.name || '-'}</span>
+      <div class="flex items-center gap-2">
+        <button
+          class="h-8 px-3 text-gray-500 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 text-[11px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1 cursor-pointer"
+          onclick={handleCreateProfile}
+          disabled={profileSaving}
+        >
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          {t.createProfile}
+        </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
       <div>
         <label for="profile" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.profile}</label>
         <select
@@ -395,105 +427,99 @@ let { t } = $props();
           bind:value={profileForm.name}
         />
       </div>
-      <div class="md:col-span-2">
-        <label for="configPath" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.configPath}</label>
-        <input
-          id="configPath"
-          type="text"
-          placeholder={t.defaultPath}
-          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
-          bind:value={profileForm.configPath}
-          oninput={() => { customConfigPath = profileForm.configPath; }}
-        />
-      </div>
-      <div class="md:col-span-2">
-        <label for="templateDir" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.templateDir}</label>
-        <input
-          id="templateDir"
-          type="text"
-          placeholder={t.defaultPath}
-          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
-          bind:value={profileForm.templateDir}
-        />
+      <div class="flex gap-2">
+        <button
+          class="h-10 px-4 flex-1 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+          onclick={handleSaveProfile}
+          disabled={profileSaving || !activeProfileId}
+        >
+          {#if profileSaving}
+            <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          {:else if profileSaved === 'save'}
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+          {/if}
+          {profileSaved === 'save' ? (t.saved || '已保存') : t.saveProfile}
+        </button>
+        <button
+          class="h-10 px-3 text-red-500 hover:bg-red-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center cursor-pointer"
+          onclick={handleDeleteProfile}
+          disabled={profileSaving || !activeProfileId}
+          title={t.deleteProfile}
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+        </button>
       </div>
     </div>
+
+    <!-- Profile details (collapsible) -->
+    <button
+      class="mt-3 text-[11px] text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+      onclick={() => showProfileDetails = !showProfileDetails}
+    >
+      <svg class="w-3 h-3 transition-transform" class:rotate-90={showProfileDetails} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+      {t.advancedSettings || '高级设置'}
+    </button>
+    {#if showProfileDetails}
+      <div class="mt-3 grid grid-cols-1 gap-3 animate-in">
+        <div>
+          <label for="configPath" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.configPath}</label>
+          <input
+            id="configPath"
+            type="text"
+            placeholder={t.defaultPath}
+            class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+            bind:value={profileForm.configPath}
+            oninput={() => { customConfigPath = profileForm.configPath; }}
+          />
+        </div>
+        <div>
+          <label for="templateDir" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.templateDir}</label>
+          <input
+            id="templateDir"
+            type="text"
+            placeholder={t.defaultPath}
+            class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+            bind:value={profileForm.templateDir}
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            class="h-8 px-3 text-gray-500 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 text-[11px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1 cursor-pointer"
+            onclick={loadProvidersConfig}
+            disabled={credentialsLoading}
+          >
+            {#if credentialsLoading}
+              <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            {/if}
+            {credentialsLoading ? t.loading : (t.loadConfig || '重新加载配置')}
+          </button>
+          {#if providersConfig.configPath}
+            <span class="text-[11px] text-gray-400 font-mono">{providersConfig.configPath}</span>
+          {/if}
+        </div>
+        <p class="text-[11px] text-gray-400">{t.profileSwitchHint}</p>
+      </div>
+    {/if}
 
     {#if profileError}
       <div class="mt-3 text-[12px] text-red-600">{profileError}</div>
     {/if}
-
-    <div class="mt-4 flex flex-wrap gap-2">
-      <button
-        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
-        onclick={handleCreateProfile}
-        disabled={profileSaving}
-      >
-        {#if profileSaving}
-          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-        {:else if profileSaved === 'create'}
-          <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-        {/if}
-        {t.createProfile}
-      </button>
-      <button
-        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
-        onclick={handleSaveProfile}
-        disabled={profileSaving || !activeProfileId}
-      >
-        {#if profileSaving}
-          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-        {:else if profileSaved === 'save'}
-          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-        {/if}
-        {profileSaved === 'save' ? (t.saved || '已保存') : t.saveProfile}
-      </button>
-      <button
-        class="h-9 px-4 bg-red-50 text-red-600 text-[12px] font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
-        onclick={handleDeleteProfile}
-        disabled={profileSaving || !activeProfileId}
-      >
-        {#if profileSaved === 'delete'}
-          <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-        {/if}
-        {t.deleteProfile}
-      </button>
-      <button
-        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
-        onclick={loadProvidersConfig}
-        disabled={credentialsLoading}
-      >
-        {#if credentialsLoading}
-          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-        {/if}
-        {credentialsLoading ? t.loading : t.loadConfig}
-      </button>
-    </div>
-
-    {#if providersConfig.configPath}
-      <div class="mt-3 text-[12px] text-gray-500">
-        {t.currentConfig}: <span class="font-mono">{providersConfig.configPath}</span>
-      </div>
-    {/if}
-    <div class="mt-2 text-[12px] text-gray-500">
-      {t.profileCredentialsFrom}: <span class="font-mono">{profileForm.configPath || providersConfig.configPath || '-'}</span>
-    </div>
-    <div class="text-[12px] text-gray-500">
-      {t.profileTemplateFrom}: <span class="font-mono">{profileForm.templateDir || '-'}</span>
-    </div>
-    <div class="text-[11px] text-gray-500 mt-1">
-      {t.profileSwitchHint}
-    </div>
   </div>
 
-  <!-- Security Notice -->
+  <!-- Security Notice (dismissible) -->
+  {#if !securityDismissed}
   <div class="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-lg">
     <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
     </svg>
-    <div class="text-[12px] text-amber-800">
+    <div class="text-[12px] text-amber-800 flex-1">
       <strong>{t.securityTip}</strong>{t.securityInfo}
     </div>
+    <button class="text-amber-400 hover:text-amber-600 flex-shrink-0 cursor-pointer" onclick={() => securityDismissed = true} aria-label="dismiss">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
   </div>
+  {/if}
 
   <!-- AI Configuration Card -->
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -527,13 +553,14 @@ let { t } = $props();
         </button>
       </div>
     </div>
-    <div class="p-5">
+    <div class="p-5 space-y-5">
+      <!-- Connection settings -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="aiProvider" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiProvider || 'Provider'}</label>
           <select 
             id="aiProvider"
-            class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 transition-shadow"
+            class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
             bind:value={aiConfig.provider}
             onchange={handleProviderChange}
           >
@@ -548,7 +575,7 @@ let { t } = $props();
             id="aiModel"
             type="text"
             placeholder={aiProviderPresets[aiConfig.provider]?.placeholder || 'Enter model name'}
-            class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 transition-shadow font-mono"
+            class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
             bind:value={aiConfig.model}
           />
           <p class="text-[10px] text-gray-500 mt-1">{t.aiModelHint || '支持任意兼容的模型名称'}</p>
@@ -563,7 +590,7 @@ let { t } = $props();
               id="aiApiKey"
               type={showApiKey ? 'text' : 'password'}
               placeholder={t.aiApiKeyPlaceholder || 'Enter your API key'}
-              class="w-full h-9 px-3 pr-10 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 transition-shadow font-mono"
+              class="w-full h-9 px-3 pr-10 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
               bind:value={aiConfig.apiKey}
             />
             <button 
@@ -591,61 +618,68 @@ let { t } = $props();
             id="aiBaseUrl"
             type="text"
             placeholder={aiProviderPresets[aiConfig.provider]?.baseUrl || ''}
-            class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 transition-shadow font-mono"
+            class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
             bind:value={aiConfig.baseUrl}
           />
           <p class="text-[10px] text-gray-500 mt-1">{t.aiBaseUrlHint || 'Optional: Override the default API endpoint'}</p>
         </div>
-        <div>
-          <label for="aiMaxRounds" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiMaxToolRounds || 'Agent 最大工具调用轮次'}</label>
-          <div class="flex items-center gap-3">
-            <input 
-              id="aiMaxRounds"
-              type="range"
-              min="0"
-              max="200"
-              step="10"
-              class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
-              bind:value={aiConfig.maxToolRounds}
-              oninput={(e) => { aiConfig.maxToolRounds = parseInt(e.target.value); }}
-            />
-            <span class="text-[12px] font-mono text-gray-700 w-8 text-center">{aiConfig.maxToolRounds || 50}</span>
-          </div>
-          <p class="text-[10px] text-gray-500 mt-1">{t.aiMaxToolRoundsHint || 'Agent/开源部署模式下的最大工具调用轮次，0 为使用默认值'}</p>
-        </div>
-        <div class="flex items-center justify-between">
+      </div>
+
+      <!-- Agent behavior settings -->
+      <div class="border-t border-gray-100 pt-4">
+        <h4 class="text-[12px] font-medium text-gray-700 mb-3">{t.agentBehavior || 'Agent 行为设置'}</h4>
+        <div class="space-y-3">
           <div>
-            <label class="block text-[11px] font-medium text-gray-500">{t.enableAskUser || 'Agent 人机协作决策'}</label>
-            <p class="text-[10px] text-gray-500 mt-0.5">{t.enableAskUserHint || 'Agent 遇到需要决策的问题时暂停并向用户询问'}</p>
+            <label for="aiMaxRounds" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiMaxToolRounds || 'Agent 最大工具调用轮次'}</label>
+            <div class="flex items-center gap-3">
+              <input 
+                id="aiMaxRounds"
+                type="range"
+                min="0"
+                max="200"
+                step="10"
+                class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                bind:value={aiConfig.maxToolRounds}
+                oninput={(e) => { aiConfig.maxToolRounds = parseInt(e.target.value); }}
+              />
+              <span class="text-[12px] font-mono text-gray-700 w-8 text-center">{aiConfig.maxToolRounds || 50}</span>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1">{t.aiMaxToolRoundsHint || 'Agent/开源部署模式下的最大工具调用轮次，0 为使用默认值'}</p>
           </div>
-          <button
-            type="button"
-            class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
-            class:bg-emerald-500={aiConfig.enableAskUser}
-            class:bg-gray-300={!aiConfig.enableAskUser}
-            onclick={() => { aiConfig.enableAskUser = !aiConfig.enableAskUser; }}
-          >
-            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-              class:translate-x-5={aiConfig.enableAskUser}
-              class:translate-x-1={!aiConfig.enableAskUser}></span>
-          </button>
-        </div>
-        <div class="flex items-center justify-between">
-          <div>
-            <label class="block text-[11px] font-medium text-gray-500">{t.enableMemory || 'Agent 记忆系统'}</label>
-            <p class="text-[10px] text-gray-500 mt-0.5">{t.enableMemoryHint || '自动记忆历史操作经验，避免重复踩坑'}</p>
+          <div class="flex items-center justify-between py-2">
+            <div>
+              <label class="block text-[11px] font-medium text-gray-500">{t.enableAskUser || 'Agent 人机协作决策'}</label>
+              <p class="text-[10px] text-gray-500 mt-0.5">{t.enableAskUserHint || 'Agent 遇到需要决策的问题时暂停并向用户询问'}</p>
+            </div>
+            <button
+              type="button"
+              class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+              class:bg-emerald-500={aiConfig.enableAskUser}
+              class:bg-gray-300={!aiConfig.enableAskUser}
+              onclick={() => { aiConfig.enableAskUser = !aiConfig.enableAskUser; }}
+            >
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                class:translate-x-5={aiConfig.enableAskUser}
+                class:translate-x-1={!aiConfig.enableAskUser}></span>
+            </button>
           </div>
-          <button
-            type="button"
-            class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
-            class:bg-emerald-500={aiConfig.enableMemory}
-            class:bg-gray-300={!aiConfig.enableMemory}
-            onclick={() => { aiConfig.enableMemory = !aiConfig.enableMemory; }}
-          >
-            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-              class:translate-x-5={aiConfig.enableMemory}
-              class:translate-x-1={!aiConfig.enableMemory}></span>
-          </button>
+          <div class="flex items-center justify-between py-2">
+            <div>
+              <label class="block text-[11px] font-medium text-gray-500">{t.enableMemory || 'Agent 记忆系统'}</label>
+              <p class="text-[10px] text-gray-500 mt-0.5">{t.enableMemoryHint || '自动记忆历史操作经验，避免重复踩坑'}</p>
+            </div>
+            <button
+              type="button"
+              class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+              class:bg-emerald-500={aiConfig.enableMemory}
+              class:bg-gray-300={!aiConfig.enableMemory}
+              onclick={() => { aiConfig.enableMemory = !aiConfig.enableMemory; }}
+            >
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                class:translate-x-5={aiConfig.enableMemory}
+                class:translate-x-1={!aiConfig.enableMemory}></span>
+            </button>
+          </div>
         </div>
       </div>
       {#if !activeProfileId}
@@ -658,21 +692,42 @@ let { t } = $props();
     <div class="flex items-center justify-center h-32">
       <div class="w-6 h-6 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
     </div>
-  {:else}
+  {:else if (providersConfig.providers || []).length > 0}
+    <!-- Provider header with search and stats -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <h3 class="text-[14px] font-semibold text-gray-900">{t.cloudCredentials || '云厂商凭据'}</h3>
+        <span class="text-[11px] text-gray-400">{configuredCount}/{(providersConfig.providers || []).length} {t.configured || '已配置'}</span>
+      </div>
+      <div class="relative">
+        <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+        <input
+          type="text"
+          placeholder={t.searchProvider || '搜索厂商...'}
+          class="h-8 pl-8 pr-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow w-48"
+          bind:value={providerSearch}
+        />
+      </div>
+    </div>
+
     <!-- Provider Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {#each providersConfig.providers || [] as provider}
-        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 class="text-[14px] font-semibold text-gray-900">{t[provider.name] || provider.name}</h3>
+      {#each filteredProviders as provider}
+        {@const configured = isProviderConfigured(provider)}
+        <div class="bg-white rounded-xl border overflow-hidden transition-colors {configured ? 'border-emerald-100' : 'border-gray-100 opacity-75 hover:opacity-100'}">
+          <div class="px-5 py-4 border-b {configured ? 'border-emerald-50 bg-emerald-50/30' : 'border-gray-100'} flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full flex-shrink-0 {configured ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
+              <h3 class="text-[14px] font-semibold text-gray-900">{t[provider.name] || provider.name}</h3>
+            </div>
             {#if editingProvider === provider.name}
               <div class="flex gap-2">
                 <button 
-                  class="px-3 py-1 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                  class="px-3 py-1 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors cursor-pointer"
                   onclick={cancelEditProvider}
                 >{t.cancel}</button>
                 <button 
-                  class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+                  class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
                   onclick={() => showSaveConfirm(provider.name)}
                   disabled={credentialsSaving[provider.name]}
                 >
@@ -686,7 +741,7 @@ let { t } = $props();
               </div>
             {:else}
               <button 
-                class="px-3 py-1 text-[12px] font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                class="px-3 py-1 text-[12px] font-medium text-gray-500 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
                 onclick={() => startEditProvider(provider)}
               >{t.edit}</button>
             {/if}
@@ -728,13 +783,18 @@ let { t } = $props();
           </div>
         </div>
       {:else}
-        <div class="col-span-full py-16 text-center">
-          <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-          </svg>
-          <p class="text-[13px] text-gray-500">{t.clickLoad}</p>
+        <div class="col-span-full py-12 text-center">
+          <p class="text-[13px] text-gray-400">{t.noMatchProvider || '没有匹配的厂商'}</p>
         </div>
       {/each}
+    </div>
+  {:else}
+    <!-- Empty state -->
+    <div class="py-16 text-center">
+      <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+      </svg>
+      <p class="text-[13px] text-gray-500">{t.clickLoad}</p>
     </div>
   {/if}
 
