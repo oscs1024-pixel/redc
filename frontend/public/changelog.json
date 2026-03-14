@@ -1,6 +1,22 @@
 {
   "changelog": [
     {
+      "version": "3.1.3",
+      "date": "2026-03-14",
+      "changes": [
+        "新增：场景右键上下文菜单 — 场景列表行右键弹出快捷菜单，支持启动/停止/SSH/查看输出/预览/克隆/标签/发送到 AI/删除，无需展开详情即可快速操作",
+        "新增：自定义部署右键上下文菜单 — 自定义部署列表同样支持右键菜单，菜单项根据部署状态动态显示",
+        "新增：优雅退出确认 — 关闭应用时如果有场景正在 apply/destroy/compose，弹出确认对话框提示用户，支持「取消」和「强制退出」两个按钮",
+        "新增：模板变量表单增强 — variables.tf 的变量根据类型生成对应控件：bool → 开关切换、number → 数字输入框、sensitive → 密码输入框，并显示类型标签",
+        "优化：移除右键禁用功能 — 取消全局右键拦截和设置页面的「禁用右键菜单」开关，不再与场景右键功能冲突",
+        "优化：本地模板参数表 — LocalTemplates 变量详情表格增加 sensitive 标识徽章，敏感变量默认值显示为遮罩",
+        "修复：exec_command 超时 — 默认超时从 120s 提升到 300s，新增可选 timeout 参数（最大 600s）",
+        "修复：exec_userdata 超时 — 添加 10 分钟超时保护，防止 session.Run() 永久挂起",
+        "修复：openclaw-bash userdata 模板 — 修复 bullseye-backports apt 源 404、添加 apt lock 等待循环、设置 DEBIAN_FRONTEND=noninteractive",
+        "修复：UserdataTemplate 最小内存 — 新增 minMemoryMB 字段，openclaw-bash 设置 4096MB，防止 Agent 选择低配实例导致 OOM"
+      ]
+    },
+    {
       "version": "3.1.2",
       "date": "2026-03-13",
       "changes": [
