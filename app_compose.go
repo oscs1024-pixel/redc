@@ -91,6 +91,8 @@ func (a *App) ComposeUp(filePath string, profiles []string) error {
 	a.emitLog(i18n.Tf("app_compose_up_start", filePath))
 	a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "running"})
 	go func() {
+		a.activeOps.Add(1)
+		defer a.activeOps.Add(-1)
 		defer a.emitRefresh()
 		if err := compose.RunComposeUp(opts); err != nil {
 			errMsg := i18n.Tf("app_compose_up_failed", err)
@@ -133,6 +135,8 @@ func (a *App) ComposeDown(filePath string, profiles []string) error {
 	a.emitLog(i18n.Tf("app_compose_down_start", filePath))
 	a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "running"})
 	go func() {
+		a.activeOps.Add(1)
+		defer a.activeOps.Add(-1)
 		defer a.emitRefresh()
 		if err := compose.RunComposeDown(opts); err != nil {
 			errMsg := i18n.Tf("app_compose_down_failed", err)

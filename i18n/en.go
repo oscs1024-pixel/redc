@@ -550,4 +550,10 @@ var enMessages = map[string]string{
 	"plugin_disable_short":   "Disable a plugin",
 	"plugin_update_short":    "Update a plugin (git pull)",
 	"plugin_info_short":      "Show plugin details",
+
+	// Graceful quit
+	"app_quit_confirm_title":   "Confirm Exit",
+	"app_quit_confirm_message": "There are active operations (deploy/destroy/compose). Are you sure you want to exit? Force quitting may leave resources in an inconsistent state.",
+	"app_quit_btn_confirm":     "Force Quit",
+	"app_quit_btn_cancel":      "Cancel",
 }

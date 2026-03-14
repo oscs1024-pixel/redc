@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"red-cloud/i18n"
@@ -40,6 +41,7 @@ type App struct {
 	disableRightClick       bool
 	httpSrv                 *HTTPServer
 	wailsMode               bool // true when running inside Wails desktop
+	activeOps               atomic.Int32 // tracks in-flight async operations (apply/destroy/compose)
 }
 
 // NewApp creates a new App application struct
@@ -47,6 +49,29 @@ func NewApp() *App {
 	return &App{
 		notificationMgr: NewNotificationManager(),
 	}
+}
+
+// HasActiveOperations returns true if any async operations (apply/destroy/compose) are in progress
+func (a *App) HasActiveOperations() bool {
+	return a.activeOps.Load() > 0
+}
+
+// beforeClose is called when the user tries to close the window
+func (a *App) beforeClose(ctx context.Context) bool {
+	if a.activeOps.Load() > 0 {
+		result, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:          runtime.QuestionDialog,
+			Title:         i18n.T("app_quit_confirm_title"),
+			Message:       i18n.T("app_quit_confirm_message"),
+			Buttons:       []string{i18n.T("app_quit_btn_cancel"), i18n.T("app_quit_btn_confirm")},
+			DefaultButton: i18n.T("app_quit_btn_cancel"),
+			CancelButton:  i18n.T("app_quit_btn_cancel"),
+		})
+		if err != nil || result != i18n.T("app_quit_btn_confirm") {
+			return true // prevent close
+		}
+	}
+	return false // allow close
 }
 
 // startup is called when the app starts. The context is saved

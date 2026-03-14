@@ -550,4 +550,10 @@ var zhMessages = map[string]string{
 	"plugin_disable_short":   "禁用插件",
 	"plugin_update_short":    "更新插件 (git pull)",
 	"plugin_info_short":      "查看插件详情",
+
+	// Graceful quit
+	"app_quit_confirm_title":   "确认退出",
+	"app_quit_confirm_message": "有正在进行的操作（部署/销毁/编排），确定要退出吗？强制退出可能导致资源状态不一致。",
+	"app_quit_btn_confirm":     "强制退出",
+	"app_quit_btn_cancel":      "取消",
 }

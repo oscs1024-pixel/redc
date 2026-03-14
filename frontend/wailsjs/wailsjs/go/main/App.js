@@ -342,6 +342,10 @@ export function GetWebhookConfig() {
   return window['go']['main']['App']['GetWebhookConfig']();
 }
 
+export function HasActiveOperations() {
+  return window['go']['main']['App']['HasActiveOperations']();
+}
+
 export function ImportConfigTemplate(arg1, arg2) {
   return window['go']['main']['App']['ImportConfigTemplate'](arg1, arg2);
 }

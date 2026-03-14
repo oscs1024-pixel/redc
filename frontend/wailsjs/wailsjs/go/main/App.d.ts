@@ -177,6 +177,8 @@ export function GetVersion():Promise<string>;
 
 export function GetWebhookConfig():Promise<main.WebhookConfig>;
 
+export function HasActiveOperations():Promise<boolean>;
+
 export function ImportConfigTemplate(arg1:string,arg2:string):Promise<void>;
 
 export function ImportTemplates(arg1:string):Promise<Array<string>>;

@@ -74,6 +74,8 @@ func (a *App) StartCase(caseID string) error {
 	a.emitLog(i18n.Tf("app_scene_prepare_start", caseName, casePath, caseState))
 
 	go func() {
+		a.activeOps.Add(1)
+		defer a.activeOps.Add(-1)
 		defer func() {
 			if r := recover(); r != nil {
 				a.emitLog(i18n.Tf("app_scene_start_error", r))
@@ -125,6 +127,8 @@ func (a *App) StopCase(caseID string) error {
 	}
 
 	go func() {
+		a.activeOps.Add(1)
+		defer a.activeOps.Add(-1)
 		defer func() {
 			if r := recover(); r != nil {
 				a.emitLog(i18n.Tf("app_scene_stop_error", r))
@@ -165,6 +169,8 @@ func (a *App) RemoveCase(caseID string) error {
 	}
 
 	go func() {
+		a.activeOps.Add(1)
+		defer a.activeOps.Add(-1)
 		defer func() {
 			if r := recover(); r != nil {
 				a.emitLog(i18n.Tf("app_scene_delete_error", r))
@@ -228,6 +234,8 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 	a.emitLog(i18n.Tf("app_creating_running_scene", name, templateName))
 
 	go func() {
+		a.activeOps.Add(1)
+		defer a.activeOps.Add(-1)
 		defer func() {
 			if r := recover(); r != nil {
 				a.emitLog(i18n.Tf("app_scene_init_error", r))
