@@ -590,41 +590,38 @@
         {#if activeSession}
           <!-- Userdata toggle -->
           <button
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors flex-shrink-0 cursor-pointer {rightPanel === 'userdata' ? 'bg-red-50 text-red-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}"
+            class="p-1.5 rounded-lg transition-colors flex-shrink-0 cursor-pointer {rightPanel === 'userdata' ? 'bg-red-50 text-red-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}"
             onclick={() => togglePanel('userdata')}
             title={t.execUserdata || '命令片段'}
           >
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
             </svg>
-            {t.execUserdata || '命令片段'}
           </button>
 
           <!-- File manager button -->
           <button
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors flex-shrink-0 cursor-pointer text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            class="p-1.5 rounded-lg transition-colors flex-shrink-0 cursor-pointer text-gray-400 hover:text-gray-600 hover:bg-gray-100"
             onclick={() => showFileManagerModal = true}
             title={t.fileManager || '文件管理器'}
           >
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
             </svg>
-            {t.fileManager || '文件管理器'}
           </button>
         {/if}
 
         <!-- Port forwarding toggle -->
         <button
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors flex-shrink-0 cursor-pointer {rightPanel === 'portForward' ? 'bg-red-50 text-red-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}"
+          class="p-1.5 rounded-lg transition-colors flex-shrink-0 cursor-pointer relative {rightPanel === 'portForward' ? 'bg-red-50 text-red-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}"
           onclick={() => togglePanel('portForward')}
           title={t.sshPortForward || '端口转发'}
         >
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
           </svg>
-          {t.sshPortForward || '端口转发'}
           {#if portForwards.length > 0}
-            <span class="px-1.5 py-0.5 bg-red-100 text-red-600 text-[10px] font-medium rounded-full">{portForwards.length}</span>
+            <span class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">{portForwards.length}</span>
           {/if}
         </button>
       </div>
@@ -820,7 +817,7 @@
           {:else}
             <input
               type="text"
-              class="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder={t.sshCaseId || '场景/部署 ID'}
               bind:value={pfCaseId}
             />
@@ -828,20 +825,20 @@
           <div class="grid grid-cols-2 gap-2">
             <input
               type="number"
-              class="px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder={t.sshLocalPort || '本地端口'}
               bind:value={pfLocalPort}
             />
             <input
               type="number"
-              class="px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder={t.sshRemotePort || '远程端口'}
               bind:value={pfRemotePort}
             />
           </div>
           <input
             type="text"
-            class="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+            class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[12px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
             placeholder={t.sshRemoteHost || '远程主机 (默认 127.0.0.1)'}
             bind:value={pfRemoteHost}
           />
@@ -907,7 +904,7 @@
               <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtHost || '主机地址'}</label>
               <input
                 type="text"
-                class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
                 placeholder="192.168.1.100"
                 bind:value={extHost}
                 onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
@@ -917,7 +914,7 @@
               <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtPort || '端口'}</label>
               <input
                 type="number"
-                class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
                 placeholder="22"
                 bind:value={extPort}
               />
@@ -927,7 +924,7 @@
             <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtUser || '用户名'}</label>
             <input
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="root"
               bind:value={extUser}
               onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
@@ -955,7 +952,7 @@
             <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtPassword || '密码'}</label>
             <input
               type="password"
-              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder={t.sshExtPasswordPlaceholder || '输入密码'}
               bind:value={extPassword}
               onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
@@ -966,7 +963,7 @@
             <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtKeyPath || '密钥路径'}</label>
             <input
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="~/.ssh/id_rsa"
               bind:value={extKeyPath}
               onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
@@ -976,7 +973,7 @@
         </div>
         <div class="flex items-center justify-end gap-2 mt-5">
           <button
-            class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
             onclick={() => showNewSessionDialog = false}
           >
             {t.cancel || '取消'}
@@ -1067,7 +1064,7 @@
             {t.sshManualInput || '手动输入 ID →'}
           </button>
           <button
-            class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
             onclick={() => showNewSessionDialog = false}
           >
             {t.cancel || '取消'}
@@ -1080,7 +1077,7 @@
             <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshCaseId || '场景/部署 ID'}</label>
             <input
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder={t.sshCaseIdPlaceholder || '输入场景或部署 ID'}
               bind:value={newSessionCaseId}
               onkeydown={(e) => { if (e.key === 'Enter') handleNewSessionSubmit(); }}
@@ -1090,7 +1087,7 @@
             <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshDisplayName || '显示名称 (可选)'}</label>
             <input
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder={t.sshDisplayNamePlaceholder || '在标签页中显示的名称'}
               bind:value={newSessionCaseName}
               onkeydown={(e) => { if (e.key === 'Enter') handleNewSessionSubmit(); }}
@@ -1106,7 +1103,7 @@
           </button>
           <div class="flex gap-2">
             <button
-              class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
               onclick={() => showNewSessionDialog = false}
             >
               {t.cancel || '取消'}
@@ -1139,11 +1136,18 @@
     onkeydown={(e) => { if (e.key === 'Escape') showCloseAllConfirm = false; }}
   >
     <div class="bg-white rounded-xl border border-gray-100 w-full max-w-xs p-5 shadow-2xl">
-      <h3 class="text-[15px] font-semibold text-gray-900 mb-2">{t.sshCloseAll || '关闭所有连接'}</h3>
-      <p class="text-[13px] text-gray-500 mb-5">{t.sshCloseAllConfirm || `确定关闭所有 ${sessions.length} 个 SSH 连接吗？`}</p>
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+        </div>
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.sshCloseAll || '关闭所有连接'}</h3>
+          <p class="text-[13px] text-gray-500 mt-0.5">{t.sshCloseAllConfirm || `确定关闭所有 ${sessions.length} 个 SSH 连接吗？`}</p>
+        </div>
+      </div>
       <div class="flex justify-end gap-2">
         <button
-          class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           onclick={() => showCloseAllConfirm = false}
         >{t.cancel || '取消'}</button>
         <button
