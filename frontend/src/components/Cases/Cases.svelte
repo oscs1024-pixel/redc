@@ -74,6 +74,13 @@ let { t, onTabChange = () => {} } = $props();
   let currentPage = $state(1);
   const pageSize = 20;
 
+  // Template search dropdown state
+  let templateDropdownOpen = $state(false);
+  let templateSearch = $state('');
+  let filteredTemplates = $derived((templates || []).filter(tmpl => 
+    !templateSearch.trim() || tmpl.name.toLowerCase().includes(templateSearch.trim().toLowerCase())
+  ));
+
   let filteredCases = $derived.by(() => {
     let result = cases;
     // Status filter
@@ -1104,24 +1111,52 @@ let { t, onTabChange = () => {} } = $props();
   {/if}
   <div class="bg-white rounded-xl border border-gray-100 p-5">
     <div class="flex items-end gap-4 mb-4">
-      <div class="flex-1">
+      <div class="flex-1 relative">
         <label for="templateSelect" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.template}</label>
-        <select 
-          id="templateSelect"
-          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-          bind:value={selectedTemplate}
-          onchange={() => loadTemplateVariables(selectedTemplate)}
+        <button
+          type="button"
+          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-left flex items-center justify-between focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow cursor-pointer {selectedTemplate ? 'text-gray-900' : 'text-gray-400'}"
+          onclick={() => { templateDropdownOpen = !templateDropdownOpen; if (!templateDropdownOpen) templateSearch = ''; }}
         >
-          <option value="">{t.selectTemplate}</option>
-          {#each templates || [] as tmpl}
-            <option value={tmpl.name}>
-              {tmpl.name}
-              {#if templateCosts[tmpl.name]}
-                · {templateCosts[tmpl.name].currency} {templateCosts[tmpl.name].total_monthly_cost.toFixed(2)}/mo
-              {/if}
-            </option>
-          {/each}
-        </select>
+          <span class="truncate">{selectedTemplate || t.selectTemplate}</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        {#if templateDropdownOpen}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="fixed inset-0 z-40" onclick={() => { templateDropdownOpen = false; templateSearch = ''; }}></div>
+          <div class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[320px] flex flex-col">
+            <div class="p-2 border-b border-gray-100">
+              <input
+                type="text"
+                class="w-full h-8 px-2.5 text-[13px] bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                placeholder={t.searchTemplate || '搜索模板...'}
+                bind:value={templateSearch}
+                autofocus
+                onkeydown={(e) => {
+                  if (e.key === 'Escape') { templateDropdownOpen = false; templateSearch = ''; }
+                }}
+              />
+            </div>
+            <div class="overflow-y-auto flex-1">
+              {#each filteredTemplates as tmpl}
+                <button
+                  type="button"
+                  class="w-full px-3 py-2 text-[13px] text-left hover:bg-gray-50 flex items-center justify-between cursor-pointer {selectedTemplate === tmpl.name ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-700'}"
+                  onclick={() => { selectedTemplate = tmpl.name; templateDropdownOpen = false; templateSearch = ''; loadTemplateVariables(tmpl.name); }}
+                >
+                  <span class="truncate">{tmpl.name}</span>
+                  {#if templateCosts[tmpl.name]}
+                    <span class="text-[11px] text-gray-400 ml-2 flex-shrink-0">{templateCosts[tmpl.name].currency} {templateCosts[tmpl.name].total_monthly_cost.toFixed(2)}/mo</span>
+                  {/if}
+                </button>
+              {:else}
+                <div class="px-3 py-4 text-[12px] text-gray-400 text-center">{t.noResults || '无匹配结果'}</div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
       <div class="w-48">
         <label for="caseName" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.name}</label>
