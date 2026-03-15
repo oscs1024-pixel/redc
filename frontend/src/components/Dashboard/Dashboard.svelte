@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
@@ -54,6 +54,15 @@
   let totalRuntime = $state('0h');
   let scheduledTaskCount = $state(0);
   
+  // Recent AI conversations (from localStorage)
+  let recentConversations = $state([]);
+  
+  // Recent tasks (all tasks for bottom section)
+  let recentTasks = $state([]);
+  
+  // MCP status
+  let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
+
   // Quick stats with real data — clickable navigation targets
   let quickStats = $derived([
     { label: t.scheduledTasks || '定时任务', value: String(scheduledTaskCount), icon: 'clock', tab: 'taskCenter' },
@@ -66,6 +75,9 @@
     await loadDashboardData();
     await runNetworkCheck();
     await loadRuntime();
+    loadRecentConversations();
+    await loadRecentTasks();
+    await loadMCPStatus();
   });
   
   async function loadDashboardData() {
@@ -179,6 +191,86 @@
       console.error('Failed to load scheduled tasks:', e);
       scheduledTaskCount = 0;
     }
+  }
+
+  function loadRecentConversations() {
+    try {
+      const saved = localStorage.getItem('redc-ai-chat-conversations');
+      if (saved) {
+        const all = JSON.parse(saved);
+        recentConversations = all
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 5);
+      }
+    } catch (e) {
+      console.error('Failed to load AI conversations:', e);
+    }
+  }
+
+  async function loadRecentTasks() {
+    try {
+      const tasks = await ListAllScheduledTasks();
+      recentTasks = (tasks || [])
+        .sort((a, b) => Number(new Date(String(b.createdAt))) - Number(new Date(String(a.createdAt))))
+        .slice(0, 5);
+    } catch (e) {
+      console.error('Failed to load recent tasks:', e);
+      recentTasks = [];
+    }
+  }
+
+  async function loadMCPStatus() {
+    try {
+      mcpStatus = await GetMCPStatus();
+    } catch (e) {
+      console.error('Failed to load MCP status:', e);
+      mcpStatus = { running: false, mode: '', address: '', protocolVersion: '' };
+    }
+  }
+
+  function formatTimeAgo(dateStr) {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t.justNow || '刚刚';
+    if (mins < 60) return `${mins}${t.minutesAgo || '分钟前'}`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}${t.hoursAgo || '小时前'}`;
+    const days = Math.floor(hours / 24);
+    return `${days}${t.daysAgo || '天前'}`;
+  }
+
+  function getModeLabel(modeId) {
+    const labels = {
+      'free': t.aiChatFreeChat || '自由对话',
+      'agent': t.aiChatAgent || 'Agent',
+      'deploy': t.aiChatDeploy || '部署',
+      'errorAnalysis': t.aiChatErrorAnalysis || '错误分析',
+      'generate': t.aiChatGenTemplate || '模板生成',
+      'recommend': t.aiChatRecommend || '推荐',
+      'cost': t.aiChatCostOpt || '成本优化'
+    };
+    return labels[modeId] || modeId;
+  }
+
+  function getTaskStatusStyle(status) {
+    const styles = {
+      'pending': 'text-blue-600 bg-blue-50',
+      'completed': 'text-emerald-600 bg-emerald-50',
+      'failed': 'text-red-600 bg-red-50',
+      'cancelled': 'text-gray-500 bg-gray-50'
+    };
+    return styles[status] || 'text-gray-600 bg-gray-50';
+  }
+
+  function getTaskActionLabel(action) {
+    const labels = {
+      'start': t.start || '启动',
+      'stop': t.stop || '停止',
+      'ssh_command': 'SSH',
+      'auto_stop': t.autoStop || '自动停止'
+    };
+    return labels[action] || action;
   }
 
   // Case action loading states
@@ -558,6 +650,119 @@
             </div>
           {/if}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Section: Recent AI Chat + Recent Tasks + MCP Status -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+    <!-- Recent AI Conversations -->
+    <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.recentAIChat || '最近 AI 对话'}</h3>
+        <button class="text-[11px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer" onclick={() => onTabChange('aiChat')}>
+          {t.viewAll || '查看全部'} →
+        </button>
+      </div>
+      <div class="divide-y divide-gray-50">
+        {#if recentConversations.length === 0}
+          <div class="px-4 py-6 text-center text-[12px] text-gray-400">
+            {t.noAIChat || '暂无对话记录'}
+          </div>
+        {:else}
+          {#each recentConversations as conv}
+            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+            <div class="px-4 py-2.5 hover:bg-gray-50/50 transition-colors cursor-pointer" onclick={() => onTabChange('aiChat')}>
+              <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12px] font-medium text-gray-900 truncate">{conv.title || t.untitledConversation || '未命名对话'}</div>
+                  <div class="text-[10px] text-gray-400 mt-0.5">
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-gray-100 text-gray-500 mr-1">{getModeLabel(conv.mode)}</span>
+                    {conv.messages?.length || 0} {t.messages || '条消息'}
+                  </div>
+                </div>
+                <span class="text-[10px] text-gray-400 flex-shrink-0 ml-2">{formatTimeAgo(conv.updatedAt)}</span>
+              </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+
+    <!-- Recent Tasks -->
+    <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.recentTasks || '最近任务'}</h3>
+        <button class="text-[11px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer" onclick={() => onTabChange('taskCenter')}>
+          {t.viewAll || '查看全部'} →
+        </button>
+      </div>
+      <div class="divide-y divide-gray-50">
+        {#if recentTasks.length === 0}
+          <div class="px-4 py-6 text-center text-[12px] text-gray-400">
+            {t.noTasks || '暂无任务'}
+          </div>
+        {:else}
+          {#each recentTasks as task}
+            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+            <div class="px-4 py-2.5 hover:bg-gray-50/50 transition-colors cursor-pointer" onclick={() => onTabChange('taskCenter')}>
+              <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12px] font-medium text-gray-900 truncate">{task.caseName || task.caseId}</div>
+                  <div class="text-[10px] text-gray-400 mt-0.5">{getTaskActionLabel(task.action)} · {formatTimeAgo(task.createdAt)}</div>
+                </div>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium {getTaskStatusStyle(task.status)}">
+                  {task.status}
+                </span>
+              </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+
+    <!-- MCP Status -->
+    <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.mcpStatus || 'MCP 状态'}</h3>
+        <button class="text-[11px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer" onclick={() => onTabChange('ai')}>
+          {t.manage || '管理'} →
+        </button>
+      </div>
+      <div class="px-4 py-4">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center {mcpStatus.running ? 'bg-emerald-100' : 'bg-gray-100'}">
+            <div class="w-2.5 h-2.5 rounded-full {mcpStatus.running ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}"></div>
+          </div>
+          <div>
+            <div class="text-[13px] font-medium {mcpStatus.running ? 'text-emerald-700' : 'text-gray-500'}">
+              {mcpStatus.running ? (t.mcpRunning || '运行中') : (t.mcpStopped || '未启动')}
+            </div>
+            {#if mcpStatus.running}
+              <div class="text-[10px] text-gray-400">{mcpStatus.mode?.toUpperCase()} · {mcpStatus.address}</div>
+            {/if}
+          </div>
+        </div>
+        {#if mcpStatus.running}
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-gray-500">{t.mcpMode || '模式'}</span>
+              <span class="text-[11px] font-medium text-gray-900">{mcpStatus.mode?.toUpperCase()}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-gray-500">{t.mcpAddress || '地址'}</span>
+              <span class="text-[11px] font-medium text-gray-900 font-mono">{mcpStatus.address}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-gray-500">{t.mcpProtocol || '协议版本'}</span>
+              <span class="text-[11px] font-medium text-gray-900">{mcpStatus.protocolVersion}</span>
+            </div>
+          </div>
+        {:else}
+          <div class="text-center text-[11px] text-gray-400">
+            {t.mcpNotStartedHint || '前往 AI 集成页面启动 MCP 服务'}
+          </div>
+        {/if}
       </div>
     </div>
   </div>
