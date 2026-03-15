@@ -83,15 +83,22 @@ func (a *App) GetF8xStatus(caseID string) F8xStatus {
 		return F8xStatus{Error: err.Error()}
 	}
 
-	// Check both /tmp/f8x (deploy location) and /usr/local/bin/f8x (f8x self-installs there)
-	result := a.execSSHCommand(sshConfig, "f8x_path=''; for p in /usr/local/bin/f8x /tmp/f8x; do test -f \"$p\" && f8x_path=\"$p\" && break; done; if [ -n \"$f8x_path\" ]; then head -c 200 \"$f8x_path\" | grep -o 'F8x_Version=\"[^\"]*\"'; else echo 'NOT_FOUND'; fi")
-	if !result.Success {
-		return F8xStatus{Error: result.Error}
+	// Check f8x status: try which, known paths, and /ffffffff0x work dir
+	sudo := ""
+	if sshConfig.User != "root" {
+		sudo = "sudo "
 	}
+	checkCmd := fmt.Sprintf(
+		`%ssh -c 'for p in $(which f8x 2>/dev/null) /usr/local/bin/f8x /tmp/f8x; do [ -f "$p" ] && head -c 500 "$p" 2>/dev/null | grep -o "F8x_Version=\"[^\"]*\"" && exit 0; done; [ -d /ffffffff0x ] && echo "DEPLOYED" || echo "NOT_FOUND"'`,
+		sudo)
+	result := a.execSSHCommand(sshConfig, checkCmd)
 
 	output := strings.TrimSpace(result.Stdout)
-	if strings.Contains(output, "NOT_FOUND") {
+	if output == "" || strings.Contains(output, "NOT_FOUND") {
 		return F8xStatus{Deployed: false}
+	}
+	if output == "DEPLOYED" {
+		return F8xStatus{Deployed: true, Version: "installed"}
 	}
 
 	version := ""

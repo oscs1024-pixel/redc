@@ -40,6 +40,7 @@
   let billsLoading = $state(false);
   let recentCases = $state([]);
   let loading = $state(true);
+  let stopConfirm = $state({ show: false, caseId: null, caseName: '' });
   
   // Real data for templates and projects
   let templateCount = $state(0);
@@ -201,6 +202,13 @@
 
   async function handleStopCase(e, caseId) {
     e.stopPropagation();
+    const c = recentCases.find(c => c.id === caseId);
+    stopConfirm = { show: true, caseId, caseName: c?.name || caseId };
+  }
+
+  async function confirmStopCase() {
+    const caseId = stopConfirm.caseId;
+    stopConfirm = { show: false, caseId: null, caseName: '' };
     actionLoading[caseId] = 'stop';
     actionLoading = actionLoading;
     try {
@@ -554,3 +562,35 @@
     </div>
   </div>
 </div>
+
+{#if stopConfirm.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => stopConfirm = { show: false, caseId: null, caseName: '' }}>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmStop || '确认停止'}</h3>
+            <p class="text-[13px] text-gray-500">{t.stopWarning || '此操作将销毁相关资源'}</p>
+          </div>
+        </div>
+        <p class="text-[13px] text-gray-600">
+          {t.confirmStopScene || '确定要停止场景'} <span class="font-medium text-gray-900">"{stopConfirm.caseName}"</span>?
+        </p>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+          onclick={() => stopConfirm = { show: false, caseId: null, caseName: '' }}
+        >{t.cancel || '取消'}</button>
+        <button class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+          onclick={confirmStopCase}
+        >{t.stop || '停止'}</button>
+      </div>
+    </div>
+  </div>
+{/if}
