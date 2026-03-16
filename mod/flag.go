@@ -8,5 +8,5 @@ var (
 	Domain        string
 	Domain2       string
 	Base64Command string
-	Version       = "v3.1.7"
+	Version       = "v3.1.8"
 )
