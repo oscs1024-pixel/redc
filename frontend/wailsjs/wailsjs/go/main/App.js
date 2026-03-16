@@ -706,6 +706,10 @@ export function SetWebhookConfig(arg1) {
   return window['go']['main']['App']['SetWebhookConfig'](arg1);
 }
 
+export function SmartAgentChatStream(arg1, arg2) {
+  return window['go']['main']['App']['SmartAgentChatStream'](arg1, arg2);
+}
+
 export function StartCase(arg1) {
   return window['go']['main']['App']['StartCase'](arg1);
 }
@@ -776,6 +780,10 @@ export function TestTerraformEndpoints() {
 
 export function TestWebhook(arg1, arg2, arg3) {
   return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
+}
+
+export function TroubleshootAgentChatStream(arg1, arg2) {
+  return window['go']['main']['App']['TroubleshootAgentChatStream'](arg1, arg2);
 }
 
 export function UninstallPlugin(arg1) {

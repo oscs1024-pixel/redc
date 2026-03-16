@@ -49,6 +49,16 @@ func NewMemoryStore() (*MemoryStore, error) {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_memory_project ON agent_memory(project);
+	CREATE TABLE IF NOT EXISTS agent_tasks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		project TEXT NOT NULL,
+		conversation_id TEXT NOT NULL,
+		task_title TEXT NOT NULL,
+		task_status TEXT DEFAULT 'in_progress',
+		plan_json TEXT,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_tasks_project ON agent_tasks(project);
 	`
 	if _, err := db.Exec(createSQL); err != nil {
 		db.Close()
@@ -143,13 +153,15 @@ func (m *MemoryStore) GetMemoryContext(project string) string {
 		return ""
 	}
 
-	var lessons, preferences []string
+	var lessons, preferences, failures []string
 	for _, item := range items {
 		switch item.Category {
 		case "lesson":
 			lessons = append(lessons, item.Content)
 		case "preference":
 			preferences = append(preferences, item.Content)
+		case "failure":
+			failures = append(failures, item.Content)
 		default:
 			lessons = append(lessons, item.Content)
 		}
@@ -168,5 +180,92 @@ func (m *MemoryStore) GetMemoryContext(project string) string {
 			result += fmt.Sprintf("%d. %s\n", i+1, l)
 		}
 	}
+	if len(failures) > 0 {
+		result += "### 已知失败模式（遇到类似问题时直接套用解决方案）\n"
+		for _, f := range failures {
+			result += fmt.Sprintf("- %s\n", f)
+		}
+	}
 	return result
+}
+
+// TaskItem represents a persisted agent task plan
+type TaskItem struct {
+	ID             int    `json:"id"`
+	Project        string `json:"project"`
+	ConversationID string `json:"conversationId"`
+	TaskTitle      string `json:"taskTitle"`
+	TaskStatus     string `json:"taskStatus"`
+	PlanJSON       string `json:"planJson"`
+	UpdatedAt      string `json:"updatedAt"`
+}
+
+// SaveTaskPlan upserts a task plan (insert or update by conversation_id)
+func (m *MemoryStore) SaveTaskPlan(project, conversationId, title, planJSON string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	// Check if a task for this conversation already exists
+	var existingID int
+	err := m.db.QueryRow(
+		"SELECT id FROM agent_tasks WHERE conversation_id = ?", conversationId,
+	).Scan(&existingID)
+
+	if err == nil {
+		// Update existing
+		_, err = m.db.Exec(
+			"UPDATE agent_tasks SET task_title = ?, plan_json = ?, updated_at = ? WHERE id = ?",
+			title, planJSON, now, existingID,
+		)
+		return err
+	}
+
+	// Insert new
+	_, err = m.db.Exec(
+		"INSERT INTO agent_tasks (project, conversation_id, task_title, task_status, plan_json, updated_at) VALUES (?, ?, ?, 'in_progress', ?, ?)",
+		project, conversationId, title, planJSON, now,
+	)
+	return err
+}
+
+// CompleteTask marks a task as completed
+func (m *MemoryStore) CompleteTask(conversationId string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, err := m.db.Exec(
+		"UPDATE agent_tasks SET task_status = 'completed', updated_at = ? WHERE conversation_id = ?",
+		time.Now().Format("2006-01-02 15:04:05"), conversationId,
+	)
+	return err
+}
+
+// GetRecentTasks returns the most recent tasks for a project
+func (m *MemoryStore) GetRecentTasks(project string, limit int) ([]TaskItem, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if limit <= 0 {
+		limit = 10
+	}
+
+	rows, err := m.db.Query(
+		"SELECT id, project, conversation_id, task_title, task_status, COALESCE(plan_json,''), updated_at FROM agent_tasks WHERE project = ? ORDER BY updated_at DESC LIMIT ?",
+		project, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []TaskItem
+	for rows.Next() {
+		var item TaskItem
+		if err := rows.Scan(&item.ID, &item.Project, &item.ConversationID, &item.TaskTitle, &item.TaskStatus, &item.PlanJSON, &item.UpdatedAt); err != nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }

@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SmartAgentChatStream, TroubleshootAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
@@ -39,7 +39,7 @@
   let agentToolCalls = $state([]);  // { id, toolName, toolArgs, status: 'calling'|'success'|'error', content }
   let askUserPending = $state(null); // { conversationId, toolCallId, question, choices, allowFreeform }
   let askUserInput = $state('');
-
+  let agentPlan = $state(null); // { title, steps: [{name, status, detail}], currentStep }
   // Conversation history state
   let conversations = $state([]);   // Array of { id, title, mode, messages, updatedAt }
   let activeConvId = $state('');     // Currently active conversation id
@@ -232,13 +232,15 @@
         if (data.success && streamingContent) {
           // For agent mode, include tool call cards in the message
           const toolCards = agentToolCalls.length > 0 ? [...agentToolCalls] : undefined;
+          const planSnapshot = agentPlan ? { ...agentPlan } : undefined;
           messages = [...messages, {
             id: generateId(),
             role: 'assistant',
             content: streamingContent,
             timestamp: Date.now(),
             mode,
-            toolCalls: toolCards
+            toolCalls: toolCards,
+            plan: planSnapshot
           }];
         } else if (!data.success) {
           error = t.aiChatStreamError || 'AI 响应失败，请重试';
@@ -254,6 +256,7 @@
         currentConversationId = '';
         agentToolCalls = [];
         askUserPending = null;
+        agentPlan = null;
         syncCurrentConversation();
       }
     });
@@ -296,6 +299,17 @@
       }
     });
 
+    EventsOn('ai-agent-plan', (data) => {
+      if (data.conversationId === currentConversationId) {
+        agentPlan = {
+          title: data.title || '',
+          steps: data.steps || [],
+          currentStep: data.currentStep || 0,
+        };
+        scrollToBottom();
+      }
+    });
+
     // Check for pending terminal text on initial mount
     checkPendingTerminalText();
     checkPendingErrorAnalysis();
@@ -310,6 +324,7 @@
     EventsOff('ai-agent-tool-call');
     EventsOff('ai-agent-tool-result');
     EventsOff('ai-agent-ask-user');
+    EventsOff('ai-agent-plan');
     window.removeEventListener('storage', handleStorage);
   });
 
@@ -437,6 +452,7 @@
     isStreaming = true;
     streamingContent = '';
     agentToolCalls = [];
+    agentPlan = null;
     const convId = generateId();
     currentConversationId = convId;
 
@@ -448,7 +464,7 @@
 
     try {
       if (mode === 'agent') {
-        await AgentChatStream(convId, chatMessages);
+        await SmartAgentChatStream(convId, chatMessages);
       } else if (mode === 'deploy') {
         await DeployAgentChatStream(convId, chatMessages);
       } else {
@@ -461,6 +477,7 @@
       currentConversationId = '';
       agentToolCalls = [];
       askUserPending = null;
+      agentPlan = null;
     }
 
     syncCurrentConversation();
@@ -584,6 +601,10 @@
     save_compose_file: '保存编排文件', compose_preview: '预览编排', compose_up: '启动编排', compose_down: '销毁编排',
     save_template_files: '保存模板文件',
     ask_user: '用户决策',
+    update_plan: '更新计划',
+    get_template_files: '读取模板文件',
+    get_cost_estimate: '成本估算', get_balances: '余额查询', get_resource_summary: '资源汇总', get_predicted_monthly_cost: '月度预测',
+    schedule_task: '定时任务', list_scheduled_tasks: '列出定时任务', cancel_scheduled_task: '取消定时任务',
   };
 
   function getToolDisplayName(name) {
@@ -799,6 +820,23 @@
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
+                    <!-- Saved plan card (agent mode history) -->
+                    {#if msg.plan && msg.plan.steps && msg.plan.steps.length > 0}
+                      <div class="mb-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center gap-1.5 mb-1.5">
+                          <span class="text-xs">📋</span>
+                          <span class="text-[11px] font-semibold text-blue-800">{msg.plan.title || t.agentPlanTitle || '执行计划'}</span>
+                          <span class="text-[10px] text-blue-500 ml-auto font-mono">{msg.plan.steps.filter(s => s.status === 'done').length}/{msg.plan.steps.length}</span>
+                        </div>
+                        <div class="space-y-0.5">
+                          {#each msg.plan.steps as step, i}
+                            <div class="text-[10px] {step.status === 'done' ? 'text-gray-400' : step.status === 'failed' ? 'text-red-500' : 'text-gray-600'}">
+                              {step.status === 'done' ? '✅' : step.status === 'failed' ? '❌' : step.status === 'skipped' ? '⏭️' : '⬚'} {i + 1}. {step.name}
+                            </div>
+                          {/each}
+                        </div>
+                      </div>
+                    {/if}
                     <!-- Saved tool call cards (agent mode history) -->
                     {#if msg.toolCalls && msg.toolCalls.length > 0}
                       <div class="mb-2 space-y-1.5">
@@ -915,6 +953,44 @@
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
+                  <!-- Agent plan progress card -->
+                  {#if agentPlan && agentPlan.steps && agentPlan.steps.length > 0}
+                    <div class="mb-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                      <div class="flex items-center gap-2 mb-2">
+                        <span class="text-sm">📋</span>
+                        <span class="text-[12px] font-semibold text-blue-900">{agentPlan.title || t.agentPlanTitle || '执行计划'}</span>
+                        <span class="text-[10px] text-blue-500 ml-auto font-mono">
+                          {agentPlan.steps.filter(s => s.status === 'done').length}/{agentPlan.steps.length}
+                        </span>
+                      </div>
+                      <div class="space-y-1">
+                        {#each agentPlan.steps as step, i}
+                          <div class="flex items-start gap-1.5 text-[11px] {step.status === 'done' ? 'text-gray-400' : step.status === 'running' ? 'text-blue-700 font-medium' : step.status === 'failed' ? 'text-red-600' : step.status === 'skipped' ? 'text-gray-400 line-through' : 'text-gray-600'}">
+                            <span class="mt-px flex-shrink-0">
+                              {#if step.status === 'done'}✅
+                              {:else if step.status === 'running'}▶️
+                              {:else if step.status === 'failed'}❌
+                              {:else if step.status === 'skipped'}⏭️
+                              {:else}⬚
+                              {/if}
+                            </span>
+                            <span>{i + 1}. {step.name}</span>
+                          </div>
+                          {#if step.detail && (step.status === 'running' || step.status === 'failed')}
+                            <div class="ml-6 text-[10px] text-gray-500 italic">{step.detail}</div>
+                          {/if}
+                        {/each}
+                      </div>
+                      <!-- Progress bar -->
+                      {#if agentPlan.steps.length > 0}
+                        {@const doneCount = agentPlan.steps.filter(s => s.status === 'done').length}
+                        {@const totalCount = agentPlan.steps.length}
+                        <div class="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                          <div class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: {totalCount > 0 ? (doneCount / totalCount * 100) : 0}%"></div>
+                        </div>
+                      {/if}
+                    </div>
+                  {/if}
                   <!-- Live agent tool call cards -->
                   {#if agentToolCalls.length > 0}
                     <div class="mb-2 space-y-1.5">

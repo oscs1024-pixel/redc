@@ -78,6 +78,8 @@ export function DeleteRemoteFile(arg1:string,arg2:string):Promise<void>;
 export function DeleteTemplateFile(arg1:string,arg2:string):Promise<void>;
 
 export function DeployAgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
+export function SmartAgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
+export function TroubleshootAgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
 
 export function DeployCase(arg1:string,arg2:string,arg3:Record<string, string>):Promise<void>;
 

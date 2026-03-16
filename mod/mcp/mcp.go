@@ -668,6 +668,31 @@ func (s *MCPServer) getTools() []Tool {
 		},
 	})
 
+	// --- Plan tracking tool ---
+	tools = append(tools, Tool{
+		Name:        "update_plan",
+		Description: "Update and display the current execution plan to the user. Call this when you start a multi-step task to show your plan, and after completing each step to update progress. Each step has a status: pending, running, done, failed, or skipped.",
+		InputSchema: ToolSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"title": {
+					Type:        "string",
+					Description: "Plan title summarizing the overall task (e.g., 'Deploy nginx on Aliyun ECS')",
+				},
+				"steps": {
+					Type:        "array",
+					Description: "Array of step objects. Each object: {\"name\": \"step description\", \"status\": \"pending|running|done|failed|skipped\", \"detail\": \"optional detail or result\"}",
+					Items:       &Property{Type: "object"},
+				},
+				"current_step": {
+					Type:        "integer",
+					Description: "0-based index of the currently executing step",
+				},
+			},
+			Required: []string{"steps"},
+		},
+	})
+
 	return tools
 }
 
@@ -1067,6 +1092,13 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 			return ToolResult{}, fmt.Errorf("missing or invalid 'task_id' parameter")
 		}
 		return s.toolCancelScheduledTask(taskID)
+
+	case "update_plan":
+		// Handled specially by the agent loop (emits ai-agent-plan event).
+		// If called via MCP protocol directly, just acknowledge.
+		return ToolResult{
+			Content: []ContentItem{{Type: "text", Text: "Plan updated."}},
+		}, nil
 
 	default:
 		return ToolResult{}, fmt.Errorf("unknown tool: %s", name)

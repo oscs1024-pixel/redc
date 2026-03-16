@@ -182,6 +182,75 @@ func (a *App) DeployAgentChatStream(conversationId string, messages []AIChatMess
 	return a.runAgentLoop(conversationId, messages, ai.DeployAgentSystemPrompt, 50, 15*time.Minute)
 }
 
+// TroubleshootAgentChatStream runs the troubleshoot agent loop
+func (a *App) TroubleshootAgentChatStream(conversationId string, messages []AIChatMessage) error {
+	return a.runAgentLoop(conversationId, messages, ai.TroubleshootAgentSystemPrompt, 30, 10*time.Minute)
+}
+
+// SmartAgentChatStream auto-classifies user intent and routes to the best specialized agent
+func (a *App) SmartAgentChatStream(conversationId string, messages []AIChatMessage) error {
+	intent := a.classifyIntent(messages)
+	switch intent {
+	case "deploy":
+		return a.DeployAgentChatStream(conversationId, messages)
+	case "troubleshoot":
+		return a.TroubleshootAgentChatStream(conversationId, messages)
+	default:
+		return a.AgentChatStream(conversationId, messages)
+	}
+}
+
+// classifyIntent uses a lightweight LLM call to classify the user's intent
+func (a *App) classifyIntent(messages []AIChatMessage) string {
+	profile, err := redc.GetActiveProfile()
+	if err != nil || profile.AIConfig == nil {
+		return "ops"
+	}
+	aiConfig := profile.AIConfig
+	if aiConfig.APIKey == "" {
+		return "ops"
+	}
+
+	// Find the last user message
+	var lastUserMsg string
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role == "user" {
+			lastUserMsg = messages[i].Content
+			break
+		}
+	}
+	if lastUserMsg == "" {
+		return "ops"
+	}
+
+	// Truncate long messages
+	if len(lastUserMsg) > 500 {
+		lastUserMsg = lastUserMsg[:500]
+	}
+
+	prompt := fmt.Sprintf(ai.IntentClassificationPrompt, lastUserMsg)
+	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := client.ChatWithTools(ctx, []ai.Message{
+		{Role: "user", Content: prompt},
+	}, nil)
+	if err != nil || resp.Content == "" {
+		return "ops"
+	}
+
+	result := strings.TrimSpace(strings.ToLower(resp.Content))
+	switch {
+	case strings.Contains(result, "deploy"):
+		return "deploy"
+	case strings.Contains(result, "troubleshoot"):
+		return "troubleshoot"
+	default:
+		return "ops"
+	}
+}
+
 // StopAgentStream cancels a running agent conversation
 func (a *App) StopAgentStream(conversationId string) {
 	agentCancelMap.Lock()
@@ -387,6 +456,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			// Extract memories asynchronously
 			if enableMemory && a.memoryStore != nil {
 				go a.extractMemories(aiConfig, aiMessages, project.ProjectName)
+				a.memoryStore.CompleteTask(conversationId)
 			}
 			a.notifyAgentComplete(i18n.T("notify_agent_complete"), i18n.Tf("notify_agent_complete_msg", round))
 			a.emitEvent("ai-chat-complete", map[string]interface{}{
@@ -479,6 +549,35 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 					resultContent = "用户未回答，操作已取消"
 					success = false
 				}
+			} else if tc.Function.Name == "update_plan" {
+				// Special handling: emit plan event to frontend + persist to task memory
+				title, _ := args["title"].(string)
+				steps, _ := args["steps"]
+				currentStep := 0
+				if cs, ok := args["current_step"].(float64); ok {
+					currentStep = int(cs)
+				}
+
+				a.emitEvent("ai-agent-plan", map[string]interface{}{
+					"conversationId": conversationId,
+					"title":          title,
+					"steps":          steps,
+					"currentStep":    currentStep,
+				})
+
+				// Persist task plan to memory store
+				if a.memoryStore != nil {
+					a.mu.Lock()
+					proj := a.project
+					a.mu.Unlock()
+					if proj != nil {
+						planJSON, _ := json.Marshal(args)
+						a.memoryStore.SaveTaskPlan(proj.ProjectName, conversationId, title, string(planJSON))
+					}
+				}
+
+				resultContent = "Plan updated and displayed to user."
+				success = true
 			} else {
 				result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
 				success = execErr == nil
@@ -727,32 +826,41 @@ const memoryExtractionPrompt = `你是一个经验提取器。根据以下 AI Ag
 
 规则：
 1. 只提取通用的、跨对话可复用的经验，不要提取一次性的具体操作细节（如具体的 IP、case ID）
-2. 最多提取 3 条，没有值得记住的就返回空行
-3. 每条经验一行，格式为 "category|content"，category 只能是 lesson 或 preference
+2. 最多提取 5 条，没有值得记住的就返回空行
+3. 每条经验一行，格式为 "category|content"，category 只能是 lesson、preference 或 failure
 4. lesson: 操作中遇到的问题和解决方案、环境兼容性信息、工具使用技巧
 5. preference: 用户表达的偏好（如常用的云厂商、模板、实例规格）
+6. failure: 工具调用失败的结构化记录，格式为 "failure|[tool:工具名][error:错误类型][solution:解决方案]"
 
 示例输出：
 lesson|AWS t4g 系列是 ARM64 架构，VulHub 等 x86-only Docker 镜像应使用 aws/ec2-x86 模板
 preference|用户偏好使用阿里云部署
+failure|[tool:exec_command][error:apt lock][solution:等待 30-60 秒或 kill cloud-init 进程]
 
 对话记录：
 %s`
 
 // extractMemories extracts reusable experience from a completed conversation
 func (a *App) extractMemories(aiConfig *redc.AIConfig, messages []ai.Message, projectName string) {
-	// Build conversation summary (user + assistant messages only, truncated)
+	// Build conversation summary (user + assistant + failed tool messages, truncated)
 	var summary strings.Builder
 	for _, m := range messages {
-		if m.Role != "user" && m.Role != "assistant" {
+		if m.Role == "system" {
 			continue
 		}
 		content := m.Content
+		// Include tool failures but skip successful tool results (too verbose)
+		if m.Role == "tool" {
+			if !strings.Contains(content, "失败") && !strings.Contains(content, "error") && !strings.Contains(content, "Error") {
+				continue
+			}
+			content = fmt.Sprintf("[tool:%s] %s", m.Name, content)
+		}
 		if len(content) > 500 {
 			content = content[:500] + "..."
 		}
 		summary.WriteString(fmt.Sprintf("[%s]: %s\n", m.Role, content))
-		if summary.Len() > 4000 {
+		if summary.Len() > 5000 {
 			break
 		}
 	}
@@ -786,7 +894,7 @@ func (a *App) extractMemories(aiConfig *redc.AIConfig, messages []ai.Message, pr
 		}
 		category := strings.TrimSpace(parts[0])
 		content := strings.TrimSpace(parts[1])
-		if category != "lesson" && category != "preference" {
+		if category != "lesson" && category != "preference" && category != "failure" {
 			continue
 		}
 		if content == "" {

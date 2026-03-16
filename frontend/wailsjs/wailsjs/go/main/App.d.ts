@@ -359,6 +359,8 @@ export function SetSpotMonitorEnabled(arg1:boolean):Promise<void>;
 
 export function SetWebhookConfig(arg1:main.WebhookConfig):Promise<void>;
 
+export function SmartAgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
+
 export function StartCase(arg1:string):Promise<void>;
 
 export function StartCustomDeployment(arg1:string):Promise<void>;
@@ -394,6 +396,8 @@ export function SwitchProject(arg1:string):Promise<void>;
 export function TestTerraformEndpoints():Promise<Array<main.EndpointCheck>>;
 
 export function TestWebhook(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function TroubleshootAgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
 
 export function UninstallPlugin(arg1:string):Promise<void>;
 

@@ -1,6 +1,23 @@
 {
   "changelog": [
     {
+      "version": "3.1.9",
+      "date": "2026-03-17",
+      "changes": [
+        "新增：AI Agent Instruction Following 增强 — Agent 引入 TPAOR 结构化推理框架（Think→Plan→Act→Observe→Reflect），每轮工具调用前自主进行思考、计划、行动、观察、反思，复杂多步任务拆解和执行更准确",
+        "新增：Agent 执行计划可视化 — 新增 update_plan 工具，Agent 主动推送执行计划和进度到前端，实时渲染为进度卡片（✅已完成/▶️进行中/⬚待执行/❌失败），含进度条百分比显示，计划同时持久化到历史消息中",
+        "新增：智能 Agent 路由 — Agent 模式自动识别用户意图（deploy/troubleshoot/ops），自动路由到最合适的专用 Agent（部署助手/排错专家/运维助手），无需用户手动切换模式",
+        "新增：排错专用 Agent — 新增 TroubleshootAgentSystemPrompt，5 步结构化排错流程（收集信息→复现问题→定位根因→修复尝试→验证修复），自动调用 exec_command 检查日志和服务状态",
+        "新增：任务级记忆持久化 — agent_tasks 表记录每次 Agent 任务的计划和状态，任务完成时自动标记为 completed，支持跨对话恢复任务上下文",
+        "优化：Agent 记忆提取增强 — 经验提取从 3 条增加到 5 条，新增 failure 类别支持结构化失败模式记录（[tool:工具名][error:错误类型][solution:解决方案]），工具调用失败日志纳入提取范围",
+        "优化：Agent 记忆上下文注入 — 已知失败模式单独分区注入 prompt（「已知失败模式」），Agent 遇到类似问题时可直接套用解决方案",
+        "优化：Agent 错误自纠错 — prompt 引导 Agent 在工具失败时分析原因并重试（最多 2 次），区分参数问题/环境问题/权限问题采取不同策略",
+        "优化：Agent 复杂指令拆解 — prompt 引导 Agent 将多目标指令拆解为子任务，分析依赖关系，逐个执行并汇报进度",
+        "优化：部署 Agent TPAOR — DeployAgentSystemPrompt 加入结构化推理框架，每步执行前先思考和计划",
+        "优化：工具名称显示补全 — toolNameMap 新增 update_plan、get_template_files、成本估算、定时任务等工具的中文显示名"
+      ]
+    },
+    {
       "version": "3.1.8",
       "date": "2026-03-16",
       "changes": [
