@@ -16,6 +16,7 @@ import (
 
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
+	"red-cloud/mod/plugin"
 	"red-cloud/utils/sshutil"
 )
 
@@ -587,7 +588,7 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "get_case_outputs",
-			Description: "Get terraform outputs for a case (IP addresses, instance IDs, etc.)",
+			Description: "Get terraform outputs for a case (IP addresses, instance IDs, etc.) and plugin outputs (e.g. clash config file path). Values are properly formatted: arrays shown as comma-separated lists, strings shown directly.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -1933,10 +1934,45 @@ func (s *MCPServer) toolGetCaseOutputs(caseID string) (ToolResult, error) {
 	}
 
 	result := fmt.Sprintf("# Terraform Outputs for Case '%s'\n\n", c.Name)
-	result += fmt.Sprintf("| Key | Value |\n")
-	result += fmt.Sprintf("|-----|-------|\n")
-	for k, v := range outputs {
-		result += fmt.Sprintf("| %s | %s |\n", k, v)
+	result += "| Key | Value |\n"
+	result += "|-----|-------|\n"
+	for k, meta := range outputs {
+		// Properly deserialize OutputMeta.Value from json.RawMessage
+		var val interface{}
+		if jsonErr := json.Unmarshal(meta.Value, &val); jsonErr != nil {
+			result += fmt.Sprintf("| %s | %s |\n", k, string(meta.Value))
+		} else {
+			// Format cleanly based on type
+			switch v := val.(type) {
+			case string:
+				if strings.HasPrefix(v, "./") || strings.HasPrefix(v, "../") {
+					absPath := filepath.Join(c.Path, v)
+					if _, statErr := os.Stat(absPath); statErr == nil {
+						v = absPath
+					}
+				}
+				result += fmt.Sprintf("| %s | %s |\n", k, v)
+			case []interface{}:
+				// Array values (e.g. list of IPs): show as comma-separated
+				items := make([]string, 0, len(v))
+				for _, item := range v {
+					items = append(items, fmt.Sprintf("%v", item))
+				}
+				result += fmt.Sprintf("| %s | %s |\n", k, strings.Join(items, ", "))
+			default:
+				result += fmt.Sprintf("| %s | %v |\n", k, v)
+			}
+		}
+	}
+
+	// Merge plugin outputs (e.g. clash_config_file from redc-plugin-clash-config)
+	if pluginOutputs := plugin.LoadPluginOutputs(c.Path); pluginOutputs != nil && len(pluginOutputs) > 0 {
+		result += "\n# Plugin Outputs\n\n"
+		result += "| Key | Value |\n"
+		result += "|-----|-------|\n"
+		for k, v := range pluginOutputs {
+			result += fmt.Sprintf("| %s | %s |\n", k, v)
+		}
 	}
 
 	return ToolResult{
