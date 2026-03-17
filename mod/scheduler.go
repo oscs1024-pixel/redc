@@ -387,7 +387,7 @@ func (s *TaskScheduler) AddTaskFull(caseID, caseName, action string, scheduledAt
 
 	// 验证 action
 	switch action {
-	case "start", "stop", "ssh_command", "auto_stop":
+	case "start", "stop", "kill", "ssh_command", "auto_stop":
 	default:
 		return nil, fmt.Errorf("无效的操作类型: %s", action)
 	}

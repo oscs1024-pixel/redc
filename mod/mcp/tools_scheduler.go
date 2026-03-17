@@ -9,8 +9,16 @@ import (
 func schedulerToolSchemas() []Tool {
 	return []Tool{
 		{
+			Name:        "get_current_time",
+			Description: "Get current system time and timezone. Use this before scheduling tasks or when user mentions relative time (e.g., '1小时后', '明天凌晨2点').",
+			InputSchema: ToolSchema{
+				Type:       "object",
+				Properties: map[string]Property{},
+			},
+		},
+		{
 			Name:        "schedule_task",
-			Description: "Schedule a future task for a case (start or stop at a specific time)",
+			Description: "Schedule a future task for a case. Supports one-time or recurring tasks (daily/weekly/interval). Can run SSH commands on the case server and send notifications on completion.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -25,11 +33,28 @@ func schedulerToolSchemas() []Tool {
 					"action": {
 						Type:        "string",
 						Description: "Action to perform",
-						Enum:        []string{"start", "stop", "kill"},
+						Enum:        []string{"start", "stop", "kill", "ssh_command"},
 					},
 					"scheduled_at": {
 						Type:        "string",
-						Description: "Scheduled time in RFC3339 format (e.g., '2025-01-15T10:30:00Z')",
+						Description: "Scheduled time in RFC3339 format (e.g., '2025-01-15T10:30:00+08:00'). Use get_current_time first to know the current time and timezone.",
+					},
+					"repeat_type": {
+						Type:        "string",
+						Description: "Repeat type: 'once' (default), 'daily', 'weekly', or 'interval'",
+						Enum:        []string{"once", "daily", "weekly", "interval"},
+					},
+					"repeat_interval": {
+						Type:        "number",
+						Description: "Repeat interval in minutes (only for repeat_type='interval', e.g., 30 means every 30 minutes)",
+					},
+					"ssh_command": {
+						Type:        "string",
+						Description: "SSH command to execute on the case server (only for action='ssh_command'). E.g., 'systemctl restart nginx' or 'df -h && free -m'",
+					},
+					"notify": {
+						Type:        "boolean",
+						Description: "Whether to send a system notification when the task executes (default: false)",
 					},
 				},
 				Required: []string{"case_id", "action", "scheduled_at"},
@@ -37,7 +62,7 @@ func schedulerToolSchemas() []Tool {
 		},
 		{
 			Name:        "list_scheduled_tasks",
-			Description: "List all pending scheduled tasks",
+			Description: "List all pending scheduled tasks with their status, next execution time, and repeat settings",
 			InputSchema: ToolSchema{
 				Type:       "object",
 				Properties: map[string]Property{},
@@ -45,7 +70,7 @@ func schedulerToolSchemas() []Tool {
 		},
 		{
 			Name:        "cancel_scheduled_task",
-			Description: "Cancel a pending scheduled task",
+			Description: "Cancel a pending scheduled task by its ID",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -60,7 +85,24 @@ func schedulerToolSchemas() []Tool {
 	}
 }
 
-func (s *MCPServer) toolScheduleTask(caseID string, caseName string, action string, scheduledAtStr string) (ToolResult, error) {
+func (s *MCPServer) toolGetCurrentTime() (ToolResult, error) {
+	now := time.Now()
+	zone, offset := now.Zone()
+	offsetHours := offset / 3600
+	info := map[string]interface{}{
+		"current_time":   now.Format(time.RFC3339),
+		"local_time":     now.Format("2006-01-02 15:04:05"),
+		"timezone":       zone,
+		"utc_offset":     fmt.Sprintf("%+d:00", offsetHours),
+		"unix_timestamp": now.Unix(),
+	}
+	data, _ := json.MarshalIndent(info, "", "  ")
+	return ToolResult{
+		Content: []ContentItem{{Type: "text", Text: string(data)}},
+	}, nil
+}
+
+func (s *MCPServer) toolScheduleTask(caseID string, caseName string, action string, scheduledAtStr string, repeatType string, repeatInterval int, sshCommand string, notify bool) (ToolResult, error) {
 	if s.app == nil {
 		return ToolResult{}, fmt.Errorf("scheduler tools require GUI mode (AppBridge not available)")
 	}
@@ -68,7 +110,10 @@ func (s *MCPServer) toolScheduleTask(caseID string, caseName string, action stri
 	if err != nil {
 		return ToolResult{}, fmt.Errorf("invalid scheduled_at format (expected RFC3339): %v", err)
 	}
-	result, err := s.app.MCPScheduleTask(caseID, caseName, action, scheduledAt)
+	if repeatType == "" {
+		repeatType = "once"
+	}
+	result, err := s.app.MCPScheduleTaskFull(caseID, caseName, action, scheduledAt, repeatType, repeatInterval, sshCommand, notify)
 	if err != nil {
 		return ToolResult{}, err
 	}

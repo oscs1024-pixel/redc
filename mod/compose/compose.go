@@ -19,13 +19,32 @@ import (
 
 // RunComposeUp 编排入口
 func RunComposeUp(opts ComposeOptions) error {
+	_, err := RunComposeUpWithResult(opts)
+	return err
+}
+
+// ComposeUpResult 编排结果
+type ComposeUpResult struct {
+	Services []ComposeUpService `json:"services"`
+}
+
+// ComposeUpService 单个服务部署结果
+type ComposeUpService struct {
+	Name     string `json:"name"`
+	Template string `json:"template"`
+	CaseID   string `json:"case_id"`
+	Status   string `json:"status"`
+}
+
+// RunComposeUpWithResult 编排入口（返回部署结果）
+func RunComposeUpWithResult(opts ComposeOptions) (*ComposeUpResult, error) {
 	// 1. 初始化 (调用 Core)
 	ctx, err := NewComposeContext(opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := VerifyTemplates(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx.emitLog(i18n.Tf("compose_deploy_total", len(ctx.RuntimeSvcs)))
@@ -50,7 +69,7 @@ func RunComposeUp(opts ComposeOptions) error {
 				ctx.emitLog(msg)
 
 				if err := processServiceUp(svc, ctx); err != nil {
-					return fmt.Errorf("部署服务 [%s] 失败: %v", svc.Name, err)
+					return nil, fmt.Errorf("部署服务 [%s] 失败: %v", svc.Name, err)
 				}
 
 				svc.IsDeployed = true
@@ -62,7 +81,7 @@ func RunComposeUp(opts ComposeOptions) error {
 		}
 
 		if deployedInThisLoop == 0 && pendingCount > 0 {
-			return fmt.Errorf("编排死锁: 存在循环依赖，或依赖的服务被 Profile 过滤未启动")
+			return nil, fmt.Errorf("编排死锁: 存在循环依赖，或依赖的服务被 Profile 过滤未启动")
 		}
 	}
 
@@ -72,11 +91,26 @@ func RunComposeUp(opts ComposeOptions) error {
 		gologger.Info().Msg(msg)
 		ctx.emitLog(msg)
 		if err := runSetupTasks(ctx.ConfigRaw.Setup, ctx.RuntimeSvcs, ctx); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	// 4. 收集部署结果
+	result := &ComposeUpResult{}
+	for _, name := range ctx.SortedSvcKeys {
+		svc := ctx.RuntimeSvcs[name]
+		s := ComposeUpService{
+			Name:     svc.Name,
+			Template: svc.Spec.Image,
+			Status:   "deployed",
+		}
+		if svc.CaseRef != nil {
+			s.CaseID = svc.CaseRef.Id
+		}
+		result.Services = append(result.Services, s)
+	}
+
+	return result, nil
 }
 
 // RunComposeDown 销毁入口

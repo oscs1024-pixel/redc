@@ -18,9 +18,19 @@ func (a *App) MCPComposeUp(filePath string, profiles []string) error {
 	return a.ComposeUp(filePath, profiles)
 }
 
+// MCPComposeUpSync implements AppBridge — synchronous compose_up for Agent/MCP context
+func (a *App) MCPComposeUpSync(filePath string, profiles []string) (interface{}, error) {
+	return a.ComposeUpSync(filePath, profiles)
+}
+
 // MCPComposeDown implements AppBridge
 func (a *App) MCPComposeDown(filePath string, profiles []string) error {
 	return a.ComposeDown(filePath, profiles)
+}
+
+// MCPComposeDownSync implements AppBridge — synchronous compose_down for Agent/MCP context
+func (a *App) MCPComposeDownSync(filePath string, profiles []string) error {
+	return a.ComposeDownSync(filePath, profiles)
 }
 
 // MCPGetCostEstimate implements AppBridge
@@ -96,6 +106,11 @@ func (a *App) MCPSetActiveProfile(profileID string) (interface{}, error) {
 // MCPScheduleTask implements AppBridge
 func (a *App) MCPScheduleTask(caseID string, caseName string, action string, scheduledAt time.Time) (interface{}, error) {
 	return a.ScheduleTask(caseID, caseName, action, scheduledAt)
+}
+
+// MCPScheduleTaskFull implements AppBridge — supports repeat, ssh_command, notify
+func (a *App) MCPScheduleTaskFull(caseID string, caseName string, action string, scheduledAt time.Time, repeatType string, repeatInterval int, sshCommand string, notify bool) (interface{}, error) {
+	return a.ScheduleTaskFull(caseID, caseName, action, scheduledAt, repeatType, repeatInterval, sshCommand, notify)
 }
 
 // MCPListScheduledTasks implements AppBridge

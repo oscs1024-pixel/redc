@@ -133,9 +133,24 @@ type LogCallback func(message string)
 
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
-	project   *redc.RedcProject
-	app       AppBridge
-	logWriter LogCallback
+	project        *redc.RedcProject
+	app            AppBridge
+	logWriter      LogCallback
+	execTimeoutAsk sync.Map // map[conversationId] → ExecTimeoutAskFunc
+}
+
+// ExecTimeoutAskFunc is called when exec_command/exec_userdata times out.
+// Returns true to continue (extend 10 min), false to kill.
+type ExecTimeoutAskFunc func(command string, elapsed time.Duration, partialOutput string) bool
+
+// RegisterExecTimeoutAsk registers a callback for a conversation to handle exec timeout
+func (s *MCPServer) RegisterExecTimeoutAsk(conversationId string, fn ExecTimeoutAskFunc) {
+	s.execTimeoutAsk.Store(conversationId, fn)
+}
+
+// UnregisterExecTimeoutAsk removes the timeout callback for a conversation
+func (s *MCPServer) UnregisterExecTimeoutAsk(conversationId string) {
+	s.execTimeoutAsk.Delete(conversationId)
 }
 
 // NewMCPServer creates a new MCP server instance
@@ -355,7 +370,7 @@ func (s *MCPServer) getTools() []Tool {
 					},
 					"env": {
 						Type:        "object",
-						Description: "Environment variables for the template (optional)",
+						Description: "Environment variables / terraform variables for the template (optional). Note: for proxy templates (aliyun/proxy, aws/proxy), the 'node' variable controls how many VMs to create in one case (default: 10). Set node=N for N machines rather than creating N separate cases.",
 					},
 				},
 				Required: []string{"template"},
@@ -419,7 +434,7 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "exec_command",
-			Description: "Execute a command on a case via SSH. Default timeout is 5 minutes. Use the timeout parameter for long-running commands like npm install or compilation.",
+			Description: "Execute a command on a case via SSH. Default timeout is 5 minutes. Use the timeout parameter for long-running commands like npm install or compilation. IMPORTANT: When downloading files, always use 'wget -q' or 'curl -sL' to suppress progress output; raw wget/curl progress bars can overflow the result buffer and truncate actual command output.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -455,7 +470,7 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "list_userdata_templates",
-			Description: "List available userdata deployment scripts (pre-built install scripts for common software like nginx, docker, openclaw, etc.). Use these instead of writing install commands manually.",
+			Description: "List available userdata deployment scripts (pre-built install scripts for common software). IMPORTANT: f8x-bash template can install 100+ penetration testing tools (nuclei, nmap, masscan, subfinder, httpx, etc.). Always check this list BEFORE writing manual install commands.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -866,7 +881,8 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		if v, ok := args["timeout"].(float64); ok {
 			timeoutSec = int(v)
 		}
-		return s.toolExecCommand(caseID, command, timeoutSec)
+		convID, _ := args["_conversation_id"].(string)
+		return s.toolExecCommand(caseID, command, timeoutSec, convID)
 
 	case "get_ssh_info":
 		caseID, ok := args["case_id"].(string)
@@ -888,7 +904,8 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		if !ok {
 			return ToolResult{}, fmt.Errorf("missing or invalid 'template_name' parameter")
 		}
-		return s.toolExecUserdata(caseID, templateName)
+		convID, _ := args["_conversation_id"].(string)
+		return s.toolExecUserdata(caseID, templateName, convID)
 
 	case "upload_file":
 		caseID, ok := args["case_id"].(string)
@@ -1067,6 +1084,9 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		return s.toolSetActiveProfile(profileID)
 
 	// --- Scheduler tools ---
+	case "get_current_time":
+		return s.toolGetCurrentTime()
+
 	case "schedule_task":
 		caseID, ok := args["case_id"].(string)
 		if !ok {
@@ -1081,7 +1101,14 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		if !ok {
 			return ToolResult{}, fmt.Errorf("missing or invalid 'scheduled_at' parameter")
 		}
-		return s.toolScheduleTask(caseID, caseName, action, scheduledAt)
+		repeatType, _ := args["repeat_type"].(string)
+		repeatInterval := 0
+		if ri, ok := args["repeat_interval"].(float64); ok {
+			repeatInterval = int(ri)
+		}
+		sshCommand, _ := args["ssh_command"].(string)
+		notify, _ := args["notify"].(bool)
+		return s.toolScheduleTask(caseID, caseName, action, scheduledAt, repeatType, repeatInterval, sshCommand, notify)
 
 	case "list_scheduled_tasks":
 		return s.toolListScheduledTasks()
@@ -1384,7 +1411,7 @@ func (s *MCPServer) toolGetCaseStatus(caseID string) (ToolResult, error) {
 	}, nil
 }
 
-func (s *MCPServer) toolExecCommand(caseID string, command string, timeoutSec int) (ToolResult, error) {
+func (s *MCPServer) toolExecCommand(caseID string, command string, timeoutSec int, conversationId string) (ToolResult, error) {
 	c, err := s.project.GetCase(caseID)
 	if err != nil {
 		return ToolResult{}, fmt.Errorf("case not found: %v", err)
@@ -1428,6 +1455,7 @@ func (s *MCPServer) toolExecCommand(caseID string, command string, timeoutSec in
 	}()
 
 	var truncated bool
+	totalElapsed := execTimeout
 	select {
 	case err := <-done:
 		truncated = lw.truncated
@@ -1435,9 +1463,35 @@ func (s *MCPServer) toolExecCommand(caseID string, command string, timeoutSec in
 			return ToolResult{}, fmt.Errorf("command failed: %v\nOutput: %s", err, outputBuf.String())
 		}
 	case <-time.After(execTimeout):
+		// Try asking user to extend before killing
+		if conversationId != "" {
+			if fn, ok := s.execTimeoutAsk.Load(conversationId); ok {
+				askFn := fn.(ExecTimeoutAskFunc)
+				for {
+					if askFn(command, totalElapsed, outputBuf.String()) {
+						// User wants to continue, extend 10 minutes
+						extension := 10 * time.Minute
+						select {
+						case err := <-done:
+							truncated = lw.truncated
+							if err != nil {
+								return ToolResult{}, fmt.Errorf("command failed: %v\nOutput: %s", err, outputBuf.String())
+							}
+							goto commandDone
+						case <-time.After(extension):
+							totalElapsed += extension
+							continue // ask again
+						}
+					} else {
+						break // user chose to abort
+					}
+				}
+			}
+		}
 		session.Signal(ssh.SIGKILL)
-		return ToolResult{}, fmt.Errorf("command timed out after %v\nPartial output: %s", execTimeout, outputBuf.String())
+		return ToolResult{}, fmt.Errorf("command timed out after %v\nPartial output: %s", totalElapsed, outputBuf.String())
 	}
+commandDone:
 
 	output := fmt.Sprintf("Command executed on case '%s' (%s):\n", c.Name, c.GetId())
 	output += fmt.Sprintf("\nOutput:\n%s", outputBuf.String())
@@ -1525,7 +1579,7 @@ func (s *MCPServer) toolListUserdataTemplates(category string) (ToolResult, erro
 	}, nil
 }
 
-func (s *MCPServer) toolExecUserdata(caseID string, templateName string) (ToolResult, error) {
+func (s *MCPServer) toolExecUserdata(caseID string, templateName string, conversationId string) (ToolResult, error) {
 	// Find the template
 	templates, err := redc.ListUserdataTemplates()
 	if err != nil {
@@ -1588,12 +1642,40 @@ func (s *MCPServer) toolExecUserdata(caseID string, templateName string) (ToolRe
 	}()
 
 	var timedOut bool
+	totalElapsed := userdataTimeout
 	select {
 	case err = <-done:
 	case <-time.After(userdataTimeout):
-		session.Signal(ssh.SIGKILL)
-		timedOut = true
+		// Try asking user to extend before killing
+		extended := false
+		if conversationId != "" {
+			if fn, ok := s.execTimeoutAsk.Load(conversationId); ok {
+				askFn := fn.(ExecTimeoutAskFunc)
+				partial := stdoutBuf.String() + stderrBuf.String()
+				for {
+					if askFn(templateName, totalElapsed, partial) {
+						extension := 10 * time.Minute
+						select {
+						case err = <-done:
+							extended = true
+							goto userdataDone
+						case <-time.After(extension):
+							totalElapsed += extension
+							partial = stdoutBuf.String() + stderrBuf.String()
+							continue
+						}
+					} else {
+						break
+					}
+				}
+			}
+		}
+		if !extended {
+			session.Signal(ssh.SIGKILL)
+			timedOut = true
+		}
 	}
+userdataDone:
 
 	stdout := stdoutBuf.String()
 	stderr := stderrBuf.String()

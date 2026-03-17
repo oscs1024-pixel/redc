@@ -328,6 +328,13 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	}
 	systemPrompt := fmt.Sprintf(promptTemplate, langPrompt)
 
+	// Inject current time context for time-aware operations
+	now := time.Now()
+	zone, offset := now.Zone()
+	offsetHours := offset / 3600
+	systemPrompt += fmt.Sprintf("\n\n## 当前时间\n当前时间: %s (时区: %s, UTC%+d:00)",
+		now.Format("2006-01-02 15:04:05"), zone, offsetHours)
+
 	// Inject agent memory context if enabled
 	enableMemory := aiConfig.EnableMemory == nil || *aiConfig.EnableMemory // default true
 	if enableMemory && a.memoryStore != nil {
@@ -340,6 +347,24 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			}
 			if memCtx != "" {
 				systemPrompt += memCtx
+			}
+		}
+
+		// Inject recent incomplete tasks for checkpoint/resume
+		recentTasks, err := a.memoryStore.GetRecentTasks(project.ProjectName, 3)
+		if err == nil {
+			var incompleteTasks []string
+			for _, t := range recentTasks {
+				if t.TaskStatus == "in_progress" {
+					incompleteTasks = append(incompleteTasks, fmt.Sprintf("- [%s] %s (更新于 %s)", t.ConversationID[:8], t.TaskTitle, t.UpdatedAt))
+				}
+			}
+			if len(incompleteTasks) > 0 {
+				systemPrompt += "\n\n## 未完成任务（可能需要续接）\n"
+				systemPrompt += "以下任务之前未完成，如用户提到继续或恢复，可参考其上下文：\n"
+				for _, t := range incompleteTasks {
+					systemPrompt += t + "\n"
+				}
 			}
 		}
 	}
@@ -392,6 +417,43 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		delete(agentCancelMap.m, conversationId)
 		agentCancelMap.Unlock()
 	}()
+
+	// Register exec timeout callback: when exec_command/exec_userdata times out,
+	// ask user whether to continue (extend 10 min) or abort
+	mcpServer.RegisterExecTimeoutAsk(conversationId, func(command string, elapsed time.Duration, partialOutput string) bool {
+		// Show last 300 chars of output for context
+		truncatedOutput := partialOutput
+		if len(truncatedOutput) > 300 {
+			truncatedOutput = "..." + truncatedOutput[len(truncatedOutput)-300:]
+		}
+		question := fmt.Sprintf("命令执行已超时（%s）：\n`%s`\n\n最近输出：\n```\n%s\n```\n\n是否继续等待？", elapsed.Round(time.Second), command, truncatedOutput)
+
+		ch := make(chan string, 1)
+		askUserChannels.Lock()
+		askUserChannels.m[conversationId] = ch
+		askUserChannels.Unlock()
+		defer func() {
+			askUserChannels.Lock()
+			delete(askUserChannels.m, conversationId)
+			askUserChannels.Unlock()
+		}()
+
+		a.emitEvent("ai-agent-ask-user", map[string]interface{}{
+			"conversationId": conversationId,
+			"toolCallId":     "exec-timeout-" + fmt.Sprintf("%d", time.Now().UnixMilli()),
+			"question":       question,
+			"choices":        []string{"继续等待（延长10分钟）", "终止命令"},
+			"allowFreeform":  false,
+		})
+
+		select {
+		case answer := <-ch:
+			return strings.Contains(answer, "继续")
+		case <-ctx.Done():
+			return false
+		}
+	})
+	defer mcpServer.UnregisterExecTimeoutAsk(conversationId)
 
 	// Agentic loop
 	for round := 0; round < maxRounds; round++ {
@@ -558,6 +620,19 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 					currentStep = int(cs)
 				}
 
+				// Normalize step field: AI may use "content" instead of "name"
+				if stepsArr, ok := steps.([]interface{}); ok {
+					for _, s := range stepsArr {
+						if stepMap, ok := s.(map[string]interface{}); ok {
+							if _, hasName := stepMap["name"]; !hasName {
+								if content, hasContent := stepMap["content"]; hasContent {
+									stepMap["name"] = content
+								}
+							}
+						}
+					}
+				}
+
 				a.emitEvent("ai-agent-plan", map[string]interface{}{
 					"conversationId": conversationId,
 					"title":          title,
@@ -579,7 +654,10 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				resultContent = "Plan updated and displayed to user."
 				success = true
 			} else {
+				// Inject conversation ID for exec timeout handling
+				args["_conversation_id"] = conversationId
 				result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
+				delete(args, "_conversation_id")
 				success = execErr == nil
 				if execErr != nil {
 					resultContent = fmt.Sprintf("工具执行失败: %v", execErr)

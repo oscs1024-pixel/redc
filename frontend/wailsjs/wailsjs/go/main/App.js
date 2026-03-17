@@ -82,12 +82,20 @@ export function ComposeDown(arg1, arg2) {
   return window['go']['main']['App']['ComposeDown'](arg1, arg2);
 }
 
+export function ComposeDownSync(arg1, arg2) {
+  return window['go']['main']['App']['ComposeDownSync'](arg1, arg2);
+}
+
 export function ComposePreview(arg1, arg2) {
   return window['go']['main']['App']['ComposePreview'](arg1, arg2);
 }
 
 export function ComposeUp(arg1, arg2) {
   return window['go']['main']['App']['ComposeUp'](arg1, arg2);
+}
+
+export function ComposeUpSync(arg1, arg2) {
+  return window['go']['main']['App']['ComposeUpSync'](arg1, arg2);
 }
 
 export function CopyFileTo(arg1, arg2) {
@@ -494,12 +502,20 @@ export function MCPComposeDown(arg1, arg2) {
   return window['go']['main']['App']['MCPComposeDown'](arg1, arg2);
 }
 
+export function MCPComposeDownSync(arg1, arg2) {
+  return window['go']['main']['App']['MCPComposeDownSync'](arg1, arg2);
+}
+
 export function MCPComposePreview(arg1, arg2) {
   return window['go']['main']['App']['MCPComposePreview'](arg1, arg2);
 }
 
 export function MCPComposeUp(arg1, arg2) {
   return window['go']['main']['App']['MCPComposeUp'](arg1, arg2);
+}
+
+export function MCPComposeUpSync(arg1, arg2) {
+  return window['go']['main']['App']['MCPComposeUpSync'](arg1, arg2);
 }
 
 export function MCPGetActiveProfile() {
@@ -556,6 +572,10 @@ export function MCPSaveTemplateFiles(arg1, arg2) {
 
 export function MCPScheduleTask(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['MCPScheduleTask'](arg1, arg2, arg3, arg4);
+}
+
+export function MCPScheduleTaskFull(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['MCPScheduleTaskFull'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 export function MCPSetActiveProfile(arg1) {

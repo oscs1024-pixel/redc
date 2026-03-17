@@ -243,6 +243,20 @@
             plan: planSnapshot
           }];
         } else if (!data.success) {
+          // Preserve partial streaming content on error (e.g. timeout)
+          if (streamingContent) {
+            const toolCards = agentToolCalls.length > 0 ? [...agentToolCalls] : undefined;
+            const planSnapshot = agentPlan ? { ...agentPlan } : undefined;
+            messages = [...messages, {
+              id: generateId(),
+              role: 'assistant',
+              content: streamingContent + '\n\n⚠️ ' + (t.aiChatStreamInterrupted || '响应中断，以上为已接收的部分内容'),
+              timestamp: Date.now(),
+              mode,
+              toolCalls: toolCards,
+              plan: planSnapshot
+            }];
+          }
           error = t.aiChatStreamError || 'AI 响应失败，请重试';
         }
         // Notify user if they may not be watching
@@ -471,6 +485,20 @@
         await AIChatStream(convId, mode, chatMessages);
       }
     } catch (e) {
+      // Preserve partial streaming content on error
+      if (streamingContent) {
+        const toolCards = agentToolCalls.length > 0 ? [...agentToolCalls] : undefined;
+        const planSnapshot = agentPlan ? { ...agentPlan } : undefined;
+        messages = [...messages, {
+          id: generateId(),
+          role: 'assistant',
+          content: streamingContent + '\n\n⚠️ ' + (t.aiChatStreamInterrupted || '响应中断，以上为已接收的部分内容'),
+          timestamp: Date.now(),
+          mode,
+          toolCalls: toolCards,
+          plan: planSnapshot
+        }];
+      }
       error = e.message || String(e);
       isStreaming = false;
       streamingContent = '';
@@ -625,9 +653,9 @@
         { label: '安全加固建议', text: '如何对部署的红队基础设施进行安全加固？' },
       ],
       agent: [
-        { label: '部署 C2 服务器', text: '帮我搜索并部署一个 C2 服务器' },
+        { label: '部署 nginx 服务器', text: '帮我部署一个 nginx 服务器' },
         { label: '查看当前场景', text: '列出所有当前运行中的场景和状态' },
-        { label: '批量管理场景', text: '帮我检查所有场景的运行状态，停止不需要的场景' },
+        { label: '批量管理场景', text: '帮我检查所有场景的运行状态' },
       ],
       deploy: [
         { label: '部署 Clash 代理', text: '帮我部署一个 Clash 代理服务' },
@@ -831,7 +859,7 @@
                         <div class="space-y-0.5">
                           {#each msg.plan.steps as step, i}
                             <div class="text-[10px] {step.status === 'done' ? 'text-gray-400' : step.status === 'failed' ? 'text-red-500' : 'text-gray-600'}">
-                              {step.status === 'done' ? '✅' : step.status === 'failed' ? '❌' : step.status === 'skipped' ? '⏭️' : '⬚'} {i + 1}. {step.name}
+                              {step.status === 'done' ? '✅' : step.status === 'failed' ? '❌' : step.status === 'skipped' ? '⏭️' : '⬚'} {i + 1}. {step.name || step.content}
                             </div>
                           {/each}
                         </div>
@@ -855,6 +883,18 @@
                                   <div class="mt-1 text-[12px] font-medium text-gray-800 bg-white rounded px-2 py-1 border border-gray-200">↩ {tc.content}</div>
                                 {/if}
                               </div>
+                            </div>
+                          {:else if tc.toolName === 'update_plan'}
+                            <!-- update_plan: compact card, plan details shown in plan card above -->
+                            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-blue-50 border-blue-200">
+                              <span class="text-xs">📋</span>
+                              <span class="text-[11px] text-blue-700">{getToolDisplayName(tc.toolName)}</span>
+                              {#if tc.toolArgs?.title}
+                                <span class="text-[11px] text-blue-500">— {tc.toolArgs.title}</span>
+                              {/if}
+                              {#if tc.toolArgs?.steps}
+                                <span class="text-[10px] text-blue-400 ml-auto font-mono">{tc.toolArgs.steps.filter(s => s.status === 'done').length}/{tc.toolArgs.steps.length}</span>
+                              {/if}
                             </div>
                           {:else}
                           <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}">
@@ -974,7 +1014,7 @@
                               {:else}⬚
                               {/if}
                             </span>
-                            <span>{i + 1}. {step.name}</span>
+                            <span>{i + 1}. {step.name || step.content}</span>
                           </div>
                           {#if step.detail && (step.status === 'running' || step.status === 'failed')}
                             <div class="ml-6 text-[10px] text-gray-500 italic">{step.detail}</div>
@@ -1013,6 +1053,18 @@
                                 <div class="mt-1 text-[12px] font-medium text-gray-800 bg-white rounded px-2 py-1 border border-gray-200">↩ {tc.content}</div>
                               {/if}
                             </div>
+                          </div>
+                        {:else if tc.toolName === 'update_plan'}
+                          <!-- update_plan: compact card, plan details shown in plan card above -->
+                          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border {tc.status === 'success' ? 'bg-blue-50 border-blue-200' : tc.status === 'calling' ? 'bg-blue-50 border-blue-300' : 'bg-red-50 border-red-200'}">
+                            <span class="text-xs">{tc.status === 'calling' ? '⏳' : '📋'}</span>
+                            <span class="text-[11px] text-blue-700">{getToolDisplayName(tc.toolName)}</span>
+                            {#if tc.toolArgs?.title}
+                              <span class="text-[11px] text-blue-500">— {tc.toolArgs.title}</span>
+                            {/if}
+                            {#if tc.toolArgs?.steps}
+                              <span class="text-[10px] text-blue-400 ml-auto font-mono">{tc.toolArgs.steps.filter(s => s.status === 'done').length}/{tc.toolArgs.steps.length}</span>
+                            {/if}
                           </div>
                         {:else}
                         <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}">

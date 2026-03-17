@@ -47,9 +47,13 @@ export function CloseTerminal(arg1:string):Promise<void>;
 
 export function ComposeDown(arg1:string,arg2:Array<string>):Promise<void>;
 
+export function ComposeDownSync(arg1:string,arg2:Array<string>):Promise<void>;
+
 export function ComposePreview(arg1:string,arg2:Array<string>):Promise<main.ComposeSummary>;
 
 export function ComposeUp(arg1:string,arg2:Array<string>):Promise<void>;
+
+export function ComposeUpSync(arg1:string,arg2:Array<string>):Promise<any>;
 
 export function CopyFileTo(arg1:string,arg2:string):Promise<void>;
 
@@ -253,9 +257,13 @@ export function MCPCancelScheduledTask(arg1:string):Promise<void>;
 
 export function MCPComposeDown(arg1:string,arg2:Array<string>):Promise<void>;
 
+export function MCPComposeDownSync(arg1:string,arg2:Array<string>):Promise<void>;
+
 export function MCPComposePreview(arg1:string,arg2:Array<string>):Promise<any>;
 
 export function MCPComposeUp(arg1:string,arg2:Array<string>):Promise<void>;
+
+export function MCPComposeUpSync(arg1:string,arg2:Array<string>):Promise<any>;
 
 export function MCPGetActiveProfile():Promise<any>;
 
@@ -284,6 +292,8 @@ export function MCPSaveComposeFile(arg1:string,arg2:string):Promise<string>;
 export function MCPSaveTemplateFiles(arg1:string,arg2:Record<string, string>):Promise<string>;
 
 export function MCPScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time):Promise<any>;
+
+export function MCPScheduleTaskFull(arg1:string,arg2:string,arg3:string,arg4:time.Time,arg5:string,arg6:number,arg7:string,arg8:boolean):Promise<any>;
 
 export function MCPSetActiveProfile(arg1:string):Promise<any>;
 

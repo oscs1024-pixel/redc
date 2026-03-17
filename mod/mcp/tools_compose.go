@@ -44,7 +44,7 @@ func composeToolSchemas() []Tool {
 		},
 		{
 			Name:        "compose_up",
-			Description: "Start a redc-compose deployment (deploys all services in dependency order)",
+			Description: "Start a redc-compose deployment (deploys all services in dependency order). This call BLOCKS until all services are fully deployed and returns the created case IDs. Do NOT manually create cases (plan_case/start_case) for services that are in the compose file — compose_up handles everything.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -61,7 +61,7 @@ func composeToolSchemas() []Tool {
 		},
 		{
 			Name:        "compose_down",
-			Description: "Destroy a redc-compose deployment (destroys all services in reverse dependency order)",
+			Description: "Destroy a redc-compose deployment (destroys all services in reverse dependency order). This call BLOCKS until all services are fully destroyed.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
@@ -139,11 +139,14 @@ func (s *MCPServer) toolComposeUp(file string, profiles string) (ToolResult, err
 	if s.app == nil {
 		return ToolResult{}, fmt.Errorf("compose tools require GUI mode (AppBridge not available)")
 	}
-	if err := s.app.MCPComposeUp(file, parseProfiles(profiles)); err != nil {
+	result, err := s.app.MCPComposeUpSync(file, parseProfiles(profiles))
+	if err != nil {
 		return ToolResult{}, err
 	}
+	data, _ := json.MarshalIndent(result, "", "  ")
+	output := fmt.Sprintf("Compose deployment completed successfully.\n\nDeployed services:\n%s\n\nIMPORTANT: All cases listed above have been created by compose. Do NOT manually create additional cases with plan_case/start_case for these services.", string(data))
 	return ToolResult{
-		Content: []ContentItem{{Type: "text", Text: fmt.Sprintf("Compose deployment started (file: %s)", file)}},
+		Content: []ContentItem{{Type: "text", Text: output}},
 	}, nil
 }
 
@@ -151,10 +154,10 @@ func (s *MCPServer) toolComposeDown(file string, profiles string) (ToolResult, e
 	if s.app == nil {
 		return ToolResult{}, fmt.Errorf("compose tools require GUI mode (AppBridge not available)")
 	}
-	if err := s.app.MCPComposeDown(file, parseProfiles(profiles)); err != nil {
+	if err := s.app.MCPComposeDownSync(file, parseProfiles(profiles)); err != nil {
 		return ToolResult{}, err
 	}
 	return ToolResult{
-		Content: []ContentItem{{Type: "text", Text: fmt.Sprintf("Compose deployment destroyed (file: %s)", file)}},
+		Content: []ContentItem{{Type: "text", Text: fmt.Sprintf("Compose deployment destroyed successfully (file: %s). All cases have been removed.", file)}},
 	}, nil
 }

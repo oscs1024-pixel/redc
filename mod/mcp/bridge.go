@@ -9,7 +9,9 @@ type AppBridge interface {
 	// Compose
 	MCPComposePreview(filePath string, profiles []string) (interface{}, error)
 	MCPComposeUp(filePath string, profiles []string) error
+	MCPComposeUpSync(filePath string, profiles []string) (interface{}, error)
 	MCPComposeDown(filePath string, profiles []string) error
+	MCPComposeDownSync(filePath string, profiles []string) error
 
 	// Cost & Resources
 	MCPGetCostEstimate(templateName string, variables map[string]string) (interface{}, error)
@@ -33,6 +35,7 @@ type AppBridge interface {
 
 	// Scheduler
 	MCPScheduleTask(caseID string, caseName string, action string, scheduledAt time.Time) (interface{}, error)
+	MCPScheduleTaskFull(caseID string, caseName string, action string, scheduledAt time.Time, repeatType string, repeatInterval int, sshCommand string, notify bool) (interface{}, error)
 	MCPListScheduledTasks() interface{}
 	MCPCancelScheduledTask(taskID string) error
 

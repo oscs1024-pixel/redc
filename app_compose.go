@@ -62,7 +62,7 @@ func (a *App) ComposePreview(filePath string, profiles []string) (ComposeSummary
 	}, nil
 }
 
-// ComposeUp starts compose deployment asynchronously
+// ComposeUp starts compose deployment asynchronously (GUI button)
 func (a *App) ComposeUp(filePath string, profiles []string) error {
 	a.mu.Lock()
 	project := a.project
@@ -106,7 +106,52 @@ func (a *App) ComposeUp(filePath string, profiles []string) error {
 	return nil
 }
 
-// ComposeDown destroys compose deployment asynchronously
+// ComposeUpSync runs compose deployment synchronously, returning deployed case details.
+// Used by MCP/Agent tools to block until completion and get case IDs.
+func (a *App) ComposeUpSync(filePath string, profiles []string) (interface{}, error) {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		if a.initError != "" {
+			return nil, fmt.Errorf(a.initError)
+		}
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
+	}
+
+	if strings.TrimSpace(filePath) == "" {
+		filePath = "redc-compose.yaml"
+	}
+
+	opts := compose.ComposeOptions{
+		File:     filePath,
+		Profiles: profiles,
+		Project:  project,
+		LogCallback: func(msg string) {
+			a.emitEvent("compose-log", map[string]string{"message": msg})
+		},
+	}
+
+	a.emitLog(i18n.Tf("app_compose_up_start", filePath))
+	a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "running"})
+	a.activeOps.Add(1)
+	defer a.activeOps.Add(-1)
+	defer a.emitRefresh()
+
+	result, err := compose.RunComposeUpWithResult(opts)
+	if err != nil {
+		errMsg := i18n.Tf("app_compose_up_failed", err)
+		a.emitLog(errMsg)
+		a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "error", "error": errMsg})
+		return nil, err
+	}
+	a.emitLog(i18n.T("app_compose_up_done"))
+	a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "done"})
+	return result, nil
+}
+
+// ComposeDown destroys compose deployment asynchronously (GUI button)
 func (a *App) ComposeDown(filePath string, profiles []string) error {
 	a.mu.Lock()
 	project := a.project
@@ -147,6 +192,49 @@ func (a *App) ComposeDown(filePath string, profiles []string) error {
 		a.emitLog(i18n.T("app_compose_down_done"))
 		a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "done"})
 	}()
+	return nil
+}
+
+// ComposeDownSync runs compose destroy synchronously. Used by MCP/Agent tools.
+func (a *App) ComposeDownSync(filePath string, profiles []string) error {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		if a.initError != "" {
+			return fmt.Errorf(a.initError)
+		}
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
+	}
+
+	if strings.TrimSpace(filePath) == "" {
+		filePath = "redc-compose.yaml"
+	}
+
+	opts := compose.ComposeOptions{
+		File:     filePath,
+		Profiles: profiles,
+		Project:  project,
+		LogCallback: func(msg string) {
+			a.emitEvent("compose-log", map[string]string{"message": msg})
+		},
+	}
+
+	a.emitLog(i18n.Tf("app_compose_down_start", filePath))
+	a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "running"})
+	a.activeOps.Add(1)
+	defer a.activeOps.Add(-1)
+	defer a.emitRefresh()
+
+	if err := compose.RunComposeDown(opts); err != nil {
+		errMsg := i18n.Tf("app_compose_down_failed", err)
+		a.emitLog(errMsg)
+		a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "error", "error": errMsg})
+		return err
+	}
+	a.emitLog(i18n.T("app_compose_down_done"))
+	a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "done"})
 	return nil
 }
 
