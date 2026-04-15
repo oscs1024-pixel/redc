@@ -14,6 +14,7 @@
   let activeCategory = $state('all');
   let searchQuery = $state('');
   let selectedModules = $state(new Set());
+  let expandedIncludes = $state(new Set());
 
   // Install confirm dialog (single tool)
   let installConfirm = $state({ show: false, mod: null });
@@ -54,7 +55,8 @@
         m.nameZh.toLowerCase().includes(q) ||
         (m.description || '').toLowerCase().includes(q) ||
         (m.descriptionZh || '').toLowerCase().includes(q) ||
-        (m.tags || []).some(tag => tag.includes(q))
+        (m.tags || []).some(tag => tag.includes(q)) ||
+        (m.includes || []).some(t => t.name.toLowerCase().includes(q))
       );
     }
     return list;
@@ -122,6 +124,13 @@
   function showInstallConfirm(e, mod) {
     e.stopPropagation();
     installConfirm = { show: true, mod };
+  }
+
+  function toggleIncludes(e, modId) {
+    e.stopPropagation();
+    const next = new Set(expandedIncludes);
+    if (next.has(modId)) next.delete(modId); else next.add(modId);
+    expandedIncludes = next;
   }
 
   function confirmInstallSingle() {
@@ -283,6 +292,8 @@
       {#each filteredModules() as mod}
         {@const isSelected = selectedModules.has(mod.id)}
         {@const isBatch = (mod.tags || []).includes('batch')}
+        {@const hasIncludes = isBatch && mod.includes && mod.includes.length > 0}
+        {@const isExpanded = expandedIncludes.has(mod.id)}
         <div class="group bg-white rounded-xl border transition-all cursor-pointer {isSelected ? 'border-red-400 ring-1 ring-red-200 bg-red-50/30' : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'}" onclick={() => toggleModule(mod.id)}>
           <div class="p-3">
             <div class="flex items-start justify-between mb-1.5">
@@ -299,11 +310,36 @@
             <p class="text-[10px] text-gray-500 leading-relaxed line-clamp-2 mb-2">{mod.descriptionZh || mod.description}</p>
             <div class="flex items-center justify-between">
               <span class="text-[9px] text-gray-400 font-mono">{mod.flag}</span>
-              <button onclick={(e) => showInstallConfirm(e, mod)} class="text-[10px] px-2 py-0.5 rounded bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer">
-                {t.f8xInstall || '安装'}
-              </button>
+              <div class="flex items-center gap-1">
+                {#if hasIncludes}
+                  <button onclick={(e) => toggleIncludes(e, mod.id)} class="text-[10px] px-2 py-0.5 rounded bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer inline-flex items-center gap-0.5" title={t.f8xViewTools || '查看包含的工具'}>
+                    <svg class="w-3 h-3 transition-transform {isExpanded ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                    {mod.includes.length}
+                  </button>
+                {/if}
+                <button onclick={(e) => showInstallConfirm(e, mod)} class="text-[10px] px-2 py-0.5 rounded bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer">
+                  {t.f8xInstall || '安装'}
+                </button>
+              </div>
             </div>
           </div>
+          {#if hasIncludes && isExpanded}
+            <div class="border-t border-gray-100 px-3 py-2 bg-gray-50/50 max-h-48 overflow-y-auto" onclick={(e) => e.stopPropagation()}>
+              <div class="flex flex-wrap gap-1">
+                {#each mod.includes as tool}
+                  {#if tool.url}
+                    <a href={tool.url} target="_blank" rel="noopener noreferrer" onclick={(e) => { e.stopPropagation(); BrowserOpenURL(tool.url); e.preventDefault(); }} class="text-[9px] px-1.5 py-0.5 rounded bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer" title={tool.url}>
+                      {tool.name}
+                    </a>
+                  {:else}
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-white border border-gray-200 text-gray-500">
+                      {tool.name}
+                    </span>
+                  {/if}
+                {/each}
+              </div>
+            </div>
+          {/if}
         </div>
       {/each}
     </div>

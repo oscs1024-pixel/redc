@@ -10,16 +10,23 @@ import (
 	"time"
 )
 
+// F8xSubTool represents an individual tool included in a batch flag
+type F8xSubTool struct {
+	Name string `json:"name"`
+	URL  string `json:"url,omitempty"`
+}
+
 // F8xModule represents a single tool installable via f8x
 type F8xModule struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	NameZh        string   `json:"nameZh"`
-	Flag          string   `json:"flag"`
-	Category      string   `json:"category"`
-	Description   string   `json:"description"`
-	DescriptionZh string   `json:"descriptionZh"`
-	Tags          []string `json:"tags"`
+	ID            string       `json:"id"`
+	Name          string       `json:"name"`
+	NameZh        string       `json:"nameZh"`
+	Flag          string       `json:"flag"`
+	Category      string       `json:"category"`
+	Description   string       `json:"description"`
+	DescriptionZh string       `json:"descriptionZh"`
+	Tags          []string     `json:"tags"`
+	Includes      []F8xSubTool `json:"includes,omitempty"`
 }
 
 // F8xCategoryInfo describes a tool category
