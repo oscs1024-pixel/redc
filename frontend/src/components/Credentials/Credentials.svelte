@@ -653,14 +653,14 @@ let { t } = $props();
             </div>
             <button
               type="button"
-              class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+              class="relative w-9 h-5 flex-shrink-0 rounded-full transition-colors cursor-pointer"
               class:bg-emerald-500={aiConfig.enableAskUser}
               class:bg-gray-300={!aiConfig.enableAskUser}
               onclick={() => { aiConfig.enableAskUser = !aiConfig.enableAskUser; }}
             >
-              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                class:translate-x-5={aiConfig.enableAskUser}
-                class:translate-x-1={!aiConfig.enableAskUser}></span>
+              <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                class:translate-x-4={aiConfig.enableAskUser}
+                class:translate-x-0={!aiConfig.enableAskUser}></span>
             </button>
           </div>
           <div class="flex items-center justify-between py-2">
@@ -670,14 +670,14 @@ let { t } = $props();
             </div>
             <button
               type="button"
-              class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+              class="relative w-9 h-5 flex-shrink-0 rounded-full transition-colors cursor-pointer"
               class:bg-emerald-500={aiConfig.enableMemory}
               class:bg-gray-300={!aiConfig.enableMemory}
               onclick={() => { aiConfig.enableMemory = !aiConfig.enableMemory; }}
             >
-              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                class:translate-x-5={aiConfig.enableMemory}
-                class:translate-x-1={!aiConfig.enableMemory}></span>
+              <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                class:translate-x-4={aiConfig.enableMemory}
+                class:translate-x-0={!aiConfig.enableMemory}></span>
             </button>
           </div>
         </div>
