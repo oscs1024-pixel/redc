@@ -403,7 +403,7 @@ let { t } = $props();
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
       <div>
         <label for="profile" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.profile}</label>
         <select
@@ -429,7 +429,7 @@ let { t } = $props();
       </div>
       <div class="flex gap-2">
         <button
-          class="h-10 px-4 flex-1 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+          class="h-10 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
           onclick={handleSaveProfile}
           disabled={profileSaving || !activeProfileId}
         >
