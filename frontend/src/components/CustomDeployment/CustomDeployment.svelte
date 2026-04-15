@@ -272,19 +272,21 @@
 
 <div class="space-y-5">
   <!-- Tabs -->
-  <div class="flex gap-2 border-b border-gray-100">
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {activeTab === 'create' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => activeTab = 'create'}
-    >
-      {t.createDeployment || '创建部署'}
-    </button>
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {activeTab === 'manage' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => activeTab = 'manage'}
-    >
-      {t.deploymentManagement || '部署管理'}
-    </button>
+  <div class="flex items-center gap-3 flex-wrap">
+    <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
+      <button
+        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {activeTab === 'create' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => activeTab = 'create'}
+      >
+        {t.createDeployment || '创建部署'}
+      </button>
+      <button
+        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {activeTab === 'manage' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => activeTab = 'manage'}
+      >
+        {t.deploymentManagement || '部署管理'}
+      </button>
+    </div>
   </div>
 
   {#if activeTab === 'create'}
