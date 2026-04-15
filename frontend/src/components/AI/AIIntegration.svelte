@@ -231,17 +231,34 @@
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             {t.running}
           </span>
+          <button 
+            class="h-8 px-3 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
+            onclick={handleStopMCP}
+            disabled={mcpLoading}
+          >
+            {mcpLoading ? t.stoppingServer : t.stopServer}
+          </button>
         {:else}
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 text-gray-500 text-[11px] font-medium rounded-full">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
             {t.stopped}
           </span>
+          <button 
+            class="h-8 px-3 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+            onclick={handleStartMCP}
+            disabled={mcpLoading}
+          >
+            {#if mcpLoading}
+              <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            {/if}
+            {mcpLoading ? t.startingServer : t.startServer}
+          </button>
         {/if}
       </div>
     </div>
 
     {#if mcpStatus.running}
-      <div class="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4">
+      <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] sm:text-[12px]">
           <div>
             <span class="text-gray-500">{t.transportMode}</span>
@@ -261,17 +278,8 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-end">
-        <button 
-          class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
-          onclick={handleStopMCP}
-          disabled={mcpLoading}
-        >
-          {mcpLoading ? t.stoppingServer : t.stopServer}
-        </button>
-      </div>
     {:else}
-      <div class="flex items-center gap-3 mb-4">
+      <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 text-[12px] text-gray-500">
           <span class="px-2 py-0.5 bg-gray-100 rounded text-[11px] font-medium text-gray-600">Streamable HTTP</span>
         </div>
@@ -283,16 +291,6 @@
             bind:value={mcpForm.address} 
           />
         </div>
-        <button 
-          class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
-          onclick={handleStartMCP}
-          disabled={mcpLoading}
-        >
-          {#if mcpLoading}
-            <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-          {/if}
-          {mcpLoading ? t.startingServer : t.startServer}
-        </button>
       </div>
     {/if}
   </div>
