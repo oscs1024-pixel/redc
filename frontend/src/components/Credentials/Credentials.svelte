@@ -583,7 +583,7 @@ let { t } = $props();
         <div class="md:col-span-2">
           <label for="aiApiKey" class="block text-[11px] font-medium text-gray-500 mb-1">
             {t.aiApiKey || 'API Key'}
-            <span class="ml-1 text-amber-500">🔒</span>
+            <svg class="inline-block ml-1 w-3 h-3 text-amber-500 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
           </label>
           <div class="relative">
             <input 
@@ -752,7 +752,7 @@ let { t } = $props();
                 <label for="field-{provider.name}-{key}" class="block text-[11px] font-medium text-gray-500 mb-1">
                   {getFieldLabel(key)}
                   {#if provider.hasSecrets && provider.hasSecrets[key]}
-                    <span class="ml-1 text-amber-500">🔒</span>
+                    <svg class="inline-block ml-1 w-3 h-3 text-amber-500 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
                   {/if}
                 </label>
                 {#if editingProvider === provider.name}
