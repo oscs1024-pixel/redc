@@ -260,7 +260,7 @@
             messages = [...messages, {
               id: generateId(),
               role: 'assistant',
-              content: streamingContent + '\n\n⚠️ ' + (t.aiChatStreamInterrupted || '响应中断，以上为已接收的部分内容'),
+              content: streamingContent + '\n\n⚠ ' + (t.aiChatStreamInterrupted || '响应中断，以上为已接收的部分内容'),
               timestamp: Date.now(),
               mode,
               toolCalls: toolCards,
@@ -526,7 +526,7 @@
         messages = [...messages, {
           id: generateId(),
           role: 'assistant',
-          content: streamingContent + '\n\n⚠️ ' + (t.aiChatStreamInterrupted || '响应中断，以上为已接收的部分内容'),
+          content: streamingContent + '\n\n⚠ ' + (t.aiChatStreamInterrupted || '响应中断，以上为已接收的部分内容'),
           timestamp: Date.now(),
           mode,
           toolCalls: toolCards,
@@ -902,14 +902,14 @@
                     {#if msg.plan && msg.plan.steps && msg.plan.steps.length > 0}
                       <div class="mb-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="flex items-center gap-1.5 mb-1.5">
-                          <span class="text-xs">📋</span>
+                          <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
                           <span class="text-[11px] font-semibold text-blue-800">{msg.plan.title || t.agentPlanTitle || '执行计划'}</span>
                           <span class="text-[10px] text-blue-500 ml-auto font-mono">{msg.plan.steps.filter(s => s.status === 'done').length}/{msg.plan.steps.length}</span>
                         </div>
                         <div class="space-y-0.5">
                           {#each msg.plan.steps as step, i}
                             <div class="text-[10px] {step.status === 'done' ? 'text-gray-400' : step.status === 'failed' ? 'text-red-500' : 'text-gray-600'}">
-                              {step.status === 'done' ? '✅' : step.status === 'failed' ? '❌' : step.status === 'skipped' ? '⏭️' : '⬚'} {i + 1}. {step.name || step.content}
+                              {#if step.status === 'done'}<svg class="inline w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>{:else if step.status === 'failed'}<svg class="inline w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>{:else if step.status === 'skipped'}<svg class="inline w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811V8.69zM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061a1.125 1.125 0 01-1.683-.977V8.69z" /></svg>{:else}<svg class="inline w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>{/if} {i + 1}. {step.name || step.content}
                             </div>
                           {/each}
                         </div>
@@ -937,7 +937,7 @@
                           {:else if tc.toolName === 'update_plan'}
                             <!-- update_plan: compact card, plan details shown in plan card above -->
                             <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-blue-50 border-blue-200">
-                              <span class="text-xs">📋</span>
+                              <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
                               <span class="text-[11px] text-blue-700">{getToolDisplayName(tc.toolName)}</span>
                               {#if tc.toolArgs?.title}
                                 <span class="text-[11px] text-blue-500">— {tc.toolArgs.title}</span>
@@ -1012,7 +1012,7 @@
                         {#if msg.usage && msg.usage.total_tokens > 0}
                           <span class="text-[10px] text-gray-300">·</span>
                           <span class="text-[10px] text-gray-300" title="输入 {msg.usage.prompt_tokens} + 输出 {msg.usage.completion_tokens} = 总计 {msg.usage.total_tokens} tokens">
-                            📊 {msg.usage.prompt_tokens.toLocaleString()} → {msg.usage.completion_tokens.toLocaleString()} ({msg.usage.total_tokens.toLocaleString()} tokens)
+                            <svg class="inline w-3 h-3 text-gray-400 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg> {msg.usage.prompt_tokens.toLocaleString()} → {msg.usage.completion_tokens.toLocaleString()} ({msg.usage.total_tokens.toLocaleString()} tokens)
                           </span>
                         {/if}
                       </div>
@@ -1055,7 +1055,7 @@
                   {#if agentPlan && agentPlan.steps && agentPlan.steps.length > 0}
                     <div class="mb-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
                       <div class="flex items-center gap-2 mb-2">
-                        <span class="text-sm">📋</span>
+                        <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
                         <span class="text-[12px] font-semibold text-blue-900">{agentPlan.title || t.agentPlanTitle || '执行计划'}</span>
                         <span class="text-[10px] text-blue-500 ml-auto font-mono">
                           {agentPlan.steps.filter(s => s.status === 'done').length}/{agentPlan.steps.length}
@@ -1065,11 +1065,11 @@
                         {#each agentPlan.steps as step, i}
                           <div class="flex items-start gap-1.5 text-[11px] {step.status === 'done' ? 'text-gray-400' : step.status === 'running' ? 'text-blue-700 font-medium' : step.status === 'failed' ? 'text-red-600' : step.status === 'skipped' ? 'text-gray-400 line-through' : 'text-gray-600'}">
                             <span class="mt-px flex-shrink-0">
-                              {#if step.status === 'done'}✅
-                              {:else if step.status === 'running'}▶️
-                              {:else if step.status === 'failed'}❌
-                              {:else if step.status === 'skipped'}⏭️
-                              {:else}⬚
+                              {#if step.status === 'done'}<svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                              {:else if step.status === 'running'}<svg class="w-3.5 h-3.5 text-blue-600 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5.14v14l11-7-11-7z" /></svg>
+                              {:else if step.status === 'failed'}<svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                              {:else if step.status === 'skipped'}<svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811V8.69zM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061a1.125 1.125 0 01-1.683-.977V8.69z" /></svg>
+                              {:else}<svg class="w-3.5 h-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
                               {/if}
                             </span>
                             <span>{i + 1}. {step.name || step.content}</span>
@@ -1115,7 +1115,7 @@
                         {:else if tc.toolName === 'update_plan'}
                           <!-- update_plan: compact card, plan details shown in plan card above -->
                           <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border {tc.status === 'success' ? 'bg-blue-50 border-blue-200' : tc.status === 'calling' ? 'bg-blue-50 border-blue-300' : 'bg-red-50 border-red-200'}">
-                            <span class="text-xs">{tc.status === 'calling' ? '⏳' : '📋'}</span>
+                            <span class="text-xs">{#if tc.status === 'calling'}<svg class="inline w-3 h-3 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>{:else}<svg class="inline w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>{/if}</span>
                             <span class="text-[11px] text-blue-700">{getToolDisplayName(tc.toolName)}</span>
                             {#if tc.toolArgs?.title}
                               <span class="text-[11px] text-blue-500">— {tc.toolArgs.title}</span>

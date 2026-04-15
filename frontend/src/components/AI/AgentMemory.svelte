@@ -101,7 +101,7 @@
       </div>
     {:else if memories.length === 0}
       <div class="flex flex-col items-center justify-center h-64 text-center">
-        <div class="text-4xl mb-3">🧠</div>
+        <div class="text-4xl mb-3"><svg class="w-10 h-10 text-gray-300 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg></div>
         <p class="text-[13px] text-gray-500 mb-1">{t.noMemories || '暂无记忆'}</p>
         <p class="text-[11px] text-gray-400">{t.noMemoriesHint || 'Agent 在对话结束后会自动提取经验教训'}</p>
       </div>

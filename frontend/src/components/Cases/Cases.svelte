@@ -2287,7 +2287,7 @@ let { t, onTabChange = () => {} } = $props();
       </span>
       <div class="flex-1">
         <p class="text-[13px] font-semibold {spotRecoveryToast.status === 'recovered' ? 'text-emerald-800' : spotRecoveryToast.status === 'failed' ? 'text-amber-800' : 'text-blue-800'}">
-          {spotRecoveryToast.status === 'recovering' ? (t.spotRecovering || '正在自动恢复...') : spotRecoveryToast.status === 'recovered' ? (t.spotRecovered || '✅ 已自动恢复') : (t.spotRecoverFailed || '⚠️ 自动恢复失败')}
+          {spotRecoveryToast.status === 'recovering' ? (t.spotRecovering || '正在自动恢复...') : spotRecoveryToast.status === 'recovered' ? (t.spotRecovered || '已自动恢复') : (t.spotRecoverFailed || '自动恢复失败')}
         </p>
         <p class="text-[12px] mt-0.5 {spotRecoveryToast.status === 'recovered' ? 'text-emerald-600' : spotRecoveryToast.status === 'failed' ? 'text-amber-600' : 'text-blue-600'}">{spotRecoveryToast.caseName}</p>
         {#if spotRecoveryToast.status === 'failed'}

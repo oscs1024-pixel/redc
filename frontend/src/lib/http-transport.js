@@ -149,7 +149,7 @@ function showDisconnectBanner() {
   const banner = document.createElement('div');
   banner.id = 'redc-disconnect-banner';
   banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;text-align:center;padding:10px 16px;font-size:14px;font-family:system-ui,sans-serif;';
-  banner.innerHTML = '⚠️ 服务器连接已断开 / Server disconnected &nbsp;&nbsp;' +
+  banner.innerHTML = '<svg style="display:inline;width:16px;height:16px;vertical-align:middle;margin-right:6px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>服务器连接已断开 / Server disconnected &nbsp;&nbsp;' +
     '<button onclick="window.__redcReconnect__()" style="background:#fff;color:#dc2626;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:13px;">重新连接 / Reconnect</button>';
   document.body.prepend(banner);
 }
