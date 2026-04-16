@@ -17,6 +17,11 @@ func (a *App) skillsDir() string {
 	return ""
 }
 
+// GetSkillsDir returns the skills installation directory path.
+func (a *App) GetSkillsDir() string {
+	return a.skillsDir()
+}
+
 // ListSkills returns all locally installed skills.
 func (a *App) ListSkills(keyword string) []ai.SkillIndex {
 	engine := ai.NewSkillsEngine(a.skillsDir())

@@ -406,6 +406,10 @@ export function GetSkill(arg1) {
   return window['go']['main']['App']['GetSkill'](arg1);
 }
 
+export function GetSkillsDir() {
+  return window['go']['main']['App']['GetSkillsDir']();
+}
+
 export function GetSpotAutoRecoverEnabled() {
   return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
 }

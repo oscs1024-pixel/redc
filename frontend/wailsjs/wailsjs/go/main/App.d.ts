@@ -210,6 +210,8 @@ export function GetShowWelcomeDialog():Promise<boolean>;
 
 export function GetSkill(arg1:string):Promise<ai.Skill>;
 
+export function GetSkillsDir():Promise<string>;
+
 export function GetSpotAutoRecoverEnabled():Promise<boolean>;
 
 export function GetSpotMonitorEnabled():Promise<boolean>;

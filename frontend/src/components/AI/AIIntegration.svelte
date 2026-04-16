@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile, ListSkills, GetSkill, SaveCustomSkill, DeleteCustomSkill, FetchSkillsRegistry, InstallSkill } from '../../../wailsjs/go/main/App.js';
+  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile, ListSkills, GetSkill, SaveCustomSkill, DeleteCustomSkill, FetchSkillsRegistry, InstallSkill, GetSkillsDir } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
@@ -49,6 +49,7 @@
     loadMCPStatus();
     loadAIConfig();
     loadSkills();
+    GetSkillsDir().then(d => skillsDir = d).catch(() => {});
   });
 
   async function loadMCPStatus() {
@@ -131,6 +132,7 @@
   let skills = $state([]);
   let skillsLoading = $state(false);
   let skillsSearch = $state('');
+  let skillsDir = $state('');
   let selectedSkill = $state(null);
   let selectedSkillLoading = $state(false);
   let showNewSkillForm = $state(false);
@@ -461,6 +463,13 @@
     </div>
 
     <p class="text-[12px] text-gray-500 mb-3">{t.skillsDesc || 'Skills 为 AI Agent 提供领域知识，Agent 模式下会根据对话内容自动匹配相关 Skill 注入上下文。'}</p>
+
+    {#if skillsDir}
+      <div class="flex items-center gap-1.5 text-[10px] text-gray-400 mb-3">
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+        <span class="font-mono select-all">{skillsDir}</span>
+      </div>
+    {/if}
 
     <!-- Search -->
     <div class="mb-3">

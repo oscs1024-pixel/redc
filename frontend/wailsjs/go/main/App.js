@@ -378,6 +378,10 @@ export function GetPluginsDir() {
   return window['go']['main']['App']['GetPluginsDir']();
 }
 
+export function GetSkillsDir() {
+  return window['go']['main']['App']['GetSkillsDir']();
+}
+
 export function GetPredictedMonthlyCost() {
   return window['go']['main']['App']['GetPredictedMonthlyCost']();
 }
