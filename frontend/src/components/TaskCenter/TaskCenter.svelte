@@ -413,7 +413,7 @@
 
 <!-- Create Task Modal -->
 <Modal show={showCreateForm} onclose={() => showCreateForm = false} class="p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+    <div class="bg-white rounded-xl shadow-xl w-[calc(100vw-2rem)] max-w-lg overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{t.taskCreate || '创建定时任务'}</h3>
         <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 cursor-pointer" onclick={() => showCreateForm = false}>
@@ -592,7 +592,7 @@
 
 <!-- Result Modal -->
 <Modal show={resultModal.show} onclose={() => resultModal = { show: false, result: '', title: '' }} class="p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
+    <div class="bg-white rounded-xl shadow-xl w-[calc(100vw-2rem)] max-w-2xl overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{resultModal.title}</h3>
         <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 cursor-pointer" onclick={() => resultModal = { show: false, result: '', title: '' }}>

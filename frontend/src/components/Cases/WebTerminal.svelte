@@ -219,7 +219,7 @@
 </svelte:head>
 
 <Modal show={true} onclose={handleClose} class="p-4">
-  <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-6xl h-[85vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
+  <div class="bg-gray-900 rounded-xl border border-gray-700 w-[calc(100vw-2rem)] max-w-6xl h-[85vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-3">

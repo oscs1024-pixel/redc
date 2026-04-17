@@ -112,7 +112,7 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <Modal show={true} onclose={onClose} class="p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" onclick={(e) => e.stopPropagation()}>
+  <div class="bg-white rounded-xl shadow-xl w-[calc(100vw-2rem)] max-w-lg overflow-hidden" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-100">
       <div class="flex items-center justify-between">

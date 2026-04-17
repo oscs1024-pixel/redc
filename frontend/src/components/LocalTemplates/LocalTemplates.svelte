@@ -943,6 +943,7 @@
 
 <!-- Template Detail Drawer -->
 <Modal show={!!localTemplateDetail} onclose={closeTemplateDetail} class="!justify-end !items-stretch">
+  {#if localTemplateDetail}
     <div class="w-full max-w-2xl bg-white h-full overflow-auto shadow-xl" onclick={(e) => e.stopPropagation()}>
       <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div>
@@ -1064,11 +1065,10 @@
         </div>
       </div>
     </div>
+  {/if}
 </Modal>
-
-<!-- Template Editor Modal -->
 <Modal show={templateEditor.show} onclose={closeTemplateEditor} class="p-4">
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-6xl w-full h-[85vh] overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-6xl w-[calc(100vw-2rem)] h-[85vh] overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>
           <h3 class="text-[15px] font-semibold text-gray-900">{t.editTemplate}</h3>
