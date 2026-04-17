@@ -248,7 +248,7 @@
     batchInstalling = true;
     try {
       const count = await InstallAllSkills();
-      toast.success((t.installAllSuccess || 'Installed %d skills').replace('%d', count));
+      toast.success((t.skillInstallAllSuccess || 'Installed %d skills').replace('%d', count));
       await Promise.all([loadSkills(), loadRegistry()]);
     } catch (e) {
       toast.error(String(e));
@@ -267,7 +267,7 @@
     batchUpdating = true;
     try {
       const count = await UpdateAllSkills();
-      toast.success((t.updateAllSuccess || 'Updated %d skills').replace('%d', count));
+      toast.success((t.skillUpdateAllSuccess || 'Updated %d skills').replace('%d', count));
       await Promise.all([loadSkills(), loadRegistry()]);
     } catch (e) {
       toast.error(String(e));
@@ -659,7 +659,7 @@
           {:else}
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
           {/if}
-          {t.installAll || '一键安装'}
+          {t.skillInstallAll || '一键安装'}
         </button>
         <button
           onclick={handleUpdateAll}
@@ -671,7 +671,7 @@
           {:else}
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
           {/if}
-          {t.updateAll || '一键更新'}
+          {t.skillUpdateAll || '一键更新'}
         </button>
         <button
           onclick={loadRegistry}
