@@ -192,7 +192,7 @@
     ClearAuditLogs: '清空审计日志', ClearAgentMemories: '清空记忆',
     SaveProvidersConfig: '保存凭据', SetActiveProfile: '切换 Profile',
     SwitchProject: '切换项目', ScheduleTask: '创建定时', CancelScheduledTask: '取消定时',
-    AIChatStream: 'AI 对话', AgentChatStream: 'Agent 对话', DeployAgentChatStream: '部署助手',
+    AIChatStream: 'AI 对话', SmartAgentChatStream: 'Agent 对话', OrchestratorStream: '多轮编排',
   };
 
   function getMethodLabel(method) {
