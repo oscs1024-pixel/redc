@@ -397,21 +397,6 @@
           phase: data.phase,
           detail: data.detail,
         };
-        // Add phase transition as system notice
-        const phaseLabels = {
-          planning: t.aiOrchestratorPlanning || 'Planning',
-          executing: t.aiOrchestratorExecuting || 'Executing',
-          judging: t.aiOrchestratorJudging || 'Evaluating',
-          complete: t.aiOrchestratorComplete || 'Complete',
-          error: t.aiOrchestratorError || 'Error',
-        };
-        const label = phaseLabels[data.phase] || data.phase;
-        messages = [...messages, {
-          id: 'orch-' + generateId(),
-          role: 'system-notice',
-          content: `[${t.aiChatOrchestrator || 'Orchestrator'}] ${label}: ${data.detail}`,
-          timestamp: Date.now()
-        }];
         scrollToBottom();
       }
     });
@@ -419,19 +404,18 @@
     EventsOn('ai-orchestrator-judge', (data) => {
       if (data.conversationId === currentConversationId) {
         const eval_ = data.evaluation || {};
-        const confidence = Math.round((eval_.confidence || 0) * 100);
-        const judgeTitle = t.aiOrchestratorJudgeResult || 'Judge Evaluation';
-        let content = `**${judgeTitle}** (Round ${data.round})\n`;
-        content += `- ${t.aiOrchestratorConfidence || 'Confidence'}: ${confidence}%\n`;
-        if (eval_.feedback) content += `- ${t.aiOrchestratorFeedback || 'Feedback'}: ${eval_.feedback}\n`;
-        if (eval_.missing_areas?.length) content += `- ${t.aiOrchestratorMissing || 'Missing'}: ${eval_.missing_areas.join(', ')}\n`;
-        if (eval_.next_steps?.length) content += `- ${t.aiOrchestratorNextSteps || 'Next Steps'}: ${eval_.next_steps.join(', ')}\n`;
-        messages = [...messages, {
-          id: 'judge-' + generateId(),
-          role: 'system-notice',
-          content,
-          timestamp: Date.now()
-        }];
+        orchestratorStatus = {
+          ...orchestratorStatus,
+          phase: 'judged',
+          judge: {
+            round: data.round,
+            confidence: Math.round((eval_.confidence || 0) * 100),
+            feedback: eval_.feedback || '',
+            missing: eval_.missing_areas || [],
+            nextSteps: eval_.next_steps || [],
+            complete: eval_.complete || false,
+          }
+        };
         scrollToBottom();
       }
     });
@@ -473,10 +457,16 @@
     }
   });
 
-  function scrollToBottom() {
+  function scrollToBottom(force = false) {
     if (messagesContainer) {
       requestAnimationFrame(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (!messagesContainer) return;
+        // Only auto-scroll if user is near bottom (within 150px) or forced
+        const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+        if (force || isNearBottom) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       });
     }
   }
@@ -1342,16 +1332,30 @@
       <!-- Sticky progress panel (plan + orchestrator status) above input -->
       {#if isStreaming && (orchestratorStatus || (agentPlan && agentPlan.steps && agentPlan.steps.length > 0))}
         <div class="flex-shrink-0 px-0.5 pb-2">
-          <!-- Orchestrator status -->
+          <!-- Orchestrator status + judge -->
           {#if orchestratorStatus}
             <div class="mb-1.5 p-2 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
               <div class="flex items-center gap-2">
-                <svg class="w-3.5 h-3.5 text-purple-600 {orchestratorStatus.phase === 'executing' || orchestratorStatus.phase === 'judging' ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
+                <svg class="w-3.5 h-3.5 text-purple-600 {orchestratorStatus.phase === 'executing' || orchestratorStatus.phase === 'judging' ? 'animate-pulse' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
                 <span class="text-[11px] font-semibold text-purple-800">{t.aiChatOrchestrator || 'Orchestrator'}</span>
                 <span class="text-[10px] text-purple-500 font-mono ml-auto">
                   {orchestratorStatus.phase === 'complete' ? '✓' : orchestratorStatus.detail || ''}
                 </span>
               </div>
+              <!-- Judge evaluation result -->
+              {#if orchestratorStatus.judge}
+                <div class="mt-1.5 pt-1.5 border-t border-purple-200/60 space-y-0.5">
+                  <div class="flex items-center gap-1.5 text-[10px]">
+                    <span class="font-semibold text-purple-700">{t.aiOrchestratorJudgeResult || 'Judge'} R{orchestratorStatus.judge.round}</span>
+                    <span class="px-1.5 py-0.5 rounded-full text-[9px] font-mono {orchestratorStatus.judge.confidence >= 80 ? 'bg-emerald-100 text-emerald-700' : orchestratorStatus.judge.confidence >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">
+                      {orchestratorStatus.judge.confidence}%
+                    </span>
+                  </div>
+                  {#if orchestratorStatus.judge.feedback}
+                    <p class="text-[10px] text-purple-600 leading-snug line-clamp-2">{orchestratorStatus.judge.feedback}</p>
+                  {/if}
+                </div>
+              {/if}
             </div>
           {/if}
           <!-- Agent plan -->
