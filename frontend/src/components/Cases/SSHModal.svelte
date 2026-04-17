@@ -154,7 +154,7 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <Modal show={true} onclose={onClose} class="p-4">
-  <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
       <div>
         <h3 class="text-[15px] font-semibold text-gray-900">{t.sshOperations || 'SSH 运维'}</h3>

@@ -39,7 +39,7 @@
     onclick={handleBackdrop}
     onkeydown={handleKeydown}
   >
-    <div class="modal-content {animating ? 'modal-content-enter' : 'modal-content-exit'}">
+    <div class="w-full flex justify-center modal-content {animating ? 'modal-content-enter' : 'modal-content-exit'}">
       {@render children()}
     </div>
   </div>
