@@ -341,7 +341,7 @@
 
     EventsOn('ai-chat-failover', (data) => {
       if (data.conversationId === currentConversationId) {
-        const msg = t('aiChatFailoverNotice').replace('{provider}', data.provider).replace('{model}', data.model);
+        const msg = (t.aiChatFailoverNotice || 'Provider failover: {provider} ({model})').replace('{provider}', data.provider).replace('{model}', data.model);
         toast.warning(msg);
       }
     });
@@ -351,12 +351,12 @@
         const beforeK = Math.round(data.before / 1000);
         const afterK = Math.round(data.after / 1000);
         const budgetK = Math.round(data.budget / 1000);
-        const msg = (t('aiChatCompactNotice') || '上下文已压缩：{before}K → {after}K tokens（预算 {budget}K）')
+        const msg = t.aiChatCompactNotice
           .replace('{before}', beforeK).replace('{after}', afterK).replace('{budget}', budgetK);
         messages = [...messages, {
           id: 'compact-' + Date.now(),
           role: 'system-notice',
-          content: `🗜️ ${msg}`,
+          content: msg,
           timestamp: Date.now()
         }];
         toast.info(msg);
@@ -940,7 +940,10 @@
           {#if msg.role === 'system-notice'}
             <!-- System notice (compaction, etc.) -->
             <div class="flex justify-center">
-              <div class="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100">
+              <div class="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 flex items-center gap-1.5">
+                <svg class="w-3 h-3 text-blue-500 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 2v12M12 2v12M1 5l3-3M1 11l3 3M15 5l-3-3M15 11l-3 3M4 8h8"/>
+                </svg>
                 <p class="text-[11px] text-blue-600">{msg.content}</p>
               </div>
             </div>
