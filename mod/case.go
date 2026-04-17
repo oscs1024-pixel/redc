@@ -459,6 +459,11 @@ func (c *Case) runPluginHook(hookPoint string) {
 	}
 }
 
+// RunPluginHookPublic is a public wrapper for runPluginHook, used by spot monitor recovery
+func (c *Case) RunPluginHookPublic(hookPoint string) {
+	c.runPluginHook(hookPoint)
+}
+
 func (c *Case) TfOutput() (map[string]tfexec.OutputMeta, error) {
 	// 输出 output 信息
 	o, err := TfOutput(c.Path)

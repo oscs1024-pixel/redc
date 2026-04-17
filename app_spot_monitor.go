@@ -301,6 +301,18 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 		c.StatusChange(redc.StateRunning)
 	}
 
+	// Refresh terraform outputs so Case has new IPs
+	if _, err := c.TfOutput(); err != nil {
+		m.app.emitLog(fmt.Sprintf("⚠️ %s", i18n.Tf("app_spot_recover_output_failed", c.Name, err)))
+	}
+
+	// Re-run plugin hooks so plugins (e.g. clash-config, upload-r2) pick up new IPs
+	if m.app.pluginMgr != nil {
+		m.app.setupPluginHooks(c)
+		m.app.emitLog(fmt.Sprintf("🔌 %s", i18n.Tf("app_spot_recover_plugins", c.Name)))
+		c.RunPluginHookPublic("post-apply")
+	}
+
 	// Success — clear alerts for this case so new IPs can be monitored
 	m.ResetAlert(c.Id)
 

@@ -536,6 +536,8 @@ var enMessages = map[string]string{
 	"app_spot_recover_rollback":            "Rolling back spot instance: %s",
 	"app_spot_recover_rollback_failed":     "Spot instance rollback failed: %s - %v",
 	"app_spot_recover_rollback_done":       "Spot instance rollback completed: %s",
+	"app_spot_recover_plugins":             "Re-executing plugins (IP changed): %s",
+	"app_spot_recover_output_failed":       "Failed to refresh Terraform outputs: %s - %v",
 
 	// GitHub/版本相关
 	"github_connect_failed": "Cannot connect to GitHub",

@@ -536,6 +536,8 @@ var zhMessages = map[string]string{
 	"app_spot_recover_rollback":            "正在回滚抢占式实例: %s",
 	"app_spot_recover_rollback_failed":     "抢占式实例回滚失败: %s - %v",
 	"app_spot_recover_rollback_done":       "抢占式实例回滚完成: %s",
+	"app_spot_recover_plugins":             "正在重新执行插件（IP 已变更）: %s",
+	"app_spot_recover_output_failed":       "刷新 Terraform 输出失败: %s - %v",
 
 	// GitHub/版本相关
 	"github_connect_failed": "无法连接 GitHub",
