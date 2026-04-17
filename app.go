@@ -75,6 +75,15 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	return false // allow close
 }
 
+// shutdown is called when the app is shutting down
+func (a *App) shutdown(ctx context.Context) {
+	// Stop spot monitor and wait for any in-progress recovery to finish
+	if a.spotMonitor != nil {
+		a.spotMonitor.Stop()
+		a.spotMonitor = nil
+	}
+}
+
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {

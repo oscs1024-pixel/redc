@@ -532,7 +532,10 @@ var zhMessages = map[string]string{
 	"app_spot_terminated":             "抢占式实例已被回收: %s",
 	"app_spot_recovering":             "正在自动恢复抢占式实例: %s",
 	"app_spot_recovered":              "抢占式实例已自动恢复: %s",
-	"app_spot_recover_failed":         "抢占式实例自动恢复失败: %s - %v",
+	"app_spot_recover_failed":              "抢占式实例自动恢复失败: %s - %v",
+	"app_spot_recover_rollback":            "正在回滚抢占式实例: %s",
+	"app_spot_recover_rollback_failed":     "抢占式实例回滚失败: %s - %v",
+	"app_spot_recover_rollback_done":       "抢占式实例回滚完成: %s",
 
 	// GitHub/版本相关
 	"github_connect_failed": "无法连接 GitHub",

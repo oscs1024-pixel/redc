@@ -532,7 +532,10 @@ var enMessages = map[string]string{
 	"app_spot_terminated":             "Spot instance terminated by provider: %s",
 	"app_spot_recovering":             "Auto-recovering spot instance: %s",
 	"app_spot_recovered":              "Spot instance auto-recovered: %s",
-	"app_spot_recover_failed":         "Spot instance auto-recovery failed: %s - %v",
+	"app_spot_recover_failed":              "Spot instance auto-recovery failed: %s - %v",
+	"app_spot_recover_rollback":            "Rolling back spot instance: %s",
+	"app_spot_recover_rollback_failed":     "Spot instance rollback failed: %s - %v",
+	"app_spot_recover_rollback_done":       "Spot instance rollback completed: %s",
 
 	// GitHub/版本相关
 	"github_connect_failed": "Cannot connect to GitHub",

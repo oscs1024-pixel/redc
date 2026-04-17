@@ -41,6 +41,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 250, G: 251, B: 252, A: 1}, // 匹配 App.svelte 的 bg-[#fafbfc]
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		OnBeforeClose:    app.beforeClose,
 		Bind: []interface{}{
 			app,

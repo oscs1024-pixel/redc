@@ -276,6 +276,14 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 
 	if err := redc.TfApply(c.Path, c.Parameter...); err != nil {
 		m.app.emitLog(fmt.Sprintf("❌ %s", i18n.Tf("app_spot_recover_failed", c.Name, err)))
+		// Rollback: destroy partially created resources to avoid orphaned instances
+		m.app.emitLog(fmt.Sprintf("🧹 %s", i18n.Tf("app_spot_recover_rollback", c.Name)))
+		if destroyErr := redc.TfDestroy(c.Path, c.Parameter); destroyErr != nil {
+			m.app.emitLog(fmt.Sprintf("❌ %s", i18n.Tf("app_spot_recover_rollback_failed", c.Name, destroyErr)))
+		} else {
+			c.StatusChange(redc.StateStopped)
+			m.app.emitLog(fmt.Sprintf("✅ %s", i18n.Tf("app_spot_recover_rollback_done", c.Name)))
+		}
 		if m.app.notificationMgr != nil {
 			m.app.notificationMgr.SendSpotRecoverFailed(c.Name)
 		}
@@ -284,6 +292,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 			"caseName": c.Name,
 			"error":    err.Error(),
 		})
+		m.app.emitRefresh()
 		return
 	}
 
