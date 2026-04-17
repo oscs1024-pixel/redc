@@ -147,6 +147,17 @@ let { t, onTabChange = () => {} } = $props();
     if (h > 0) return `${h}h ${m}m`;
     return `${m}m`;
   }
+
+  function formatCompactTime(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${mm}-${dd} ${hh}:${mi}`;
+  }
   
   // Computed: check if we have persistent error
   let hasPersistentError = $derived(!!getPersistentError());
@@ -1486,6 +1497,7 @@ let { t, onTabChange = () => {} } = $props();
       </div>
     {/if}
     
+    <div class="overflow-x-auto">
     <table class="w-full">
       <thead>
         <tr class="border-b border-gray-100">
@@ -1498,12 +1510,12 @@ let { t, onTabChange = () => {} } = $props();
               onchange={toggleSelectAll}
             />
           </th>
-          <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.id}</th>
-          <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.name}</th>
-          <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.type}</th>
-          <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.state}</th>
-          <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.time}</th>
-          <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.actions}</th>
+          <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t.id}</th>
+          <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.name}</th>
+          <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t.type}</th>
+          <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t.state}</th>
+          <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t.time}</th>
+          <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t.actions}</th>
         </tr>
       </thead>
       <tbody>
@@ -1521,7 +1533,7 @@ let { t, onTabChange = () => {} } = $props();
                 onchange={() => toggleSelectCase(c.id)}
               />
             </td>
-            <td class="px-5 py-3.5">
+            <td class="px-3 py-3.5 whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-gray-400 transition-transform {expandedCase === c.id ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -1529,18 +1541,18 @@ let { t, onTabChange = () => {} } = $props();
                 <code class="text-[12px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{getShortId(c.id)}</code>
               </div>
             </td>
-            <td class="px-5 py-3.5">
+            <td class="px-3 py-3.5">
               <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="text-[13px] font-medium text-gray-900">{c.name}</span>
+                <span class="text-[13px] font-medium text-gray-900 truncate max-w-[200px]" title={c.name}>{c.name}</span>
                 {#each c.tags || [] as tag}
-                  <span class="px-1.5 py-0 text-[10px] rounded-full {getTagColor(tag)}">{tag}</span>
+                  <span class="px-1.5 py-0 text-[10px] rounded-full whitespace-nowrap {getTagColor(tag)}">{tag}</span>
                 {/each}
               </div>
             </td>
-            <td class="px-5 py-3.5">
+            <td class="px-3 py-3.5 whitespace-nowrap">
               <span class="text-[13px] text-gray-600">{c.type}</span>
             </td>
-            <td class="px-5 py-3.5">
+            <td class="px-3 py-3.5 whitespace-nowrap">
               <span class="inline-flex items-center gap-1.5 text-[12px] font-medium {(stateConfig[c.state] || stateConfig['pending']).color}">
                 <span class="w-1.5 h-1.5 rounded-full {(stateConfig[c.state] || stateConfig['pending']).dot}"></span>
                 {(stateConfig[c.state] || stateConfig['pending']).label}
@@ -1551,13 +1563,13 @@ let { t, onTabChange = () => {} } = $props();
                 </span>
               {/if}
             </td>
-            <td class="px-5 py-3.5">
-              <span class="text-[12px] text-gray-500">{c.stateTime}</span>
+            <td class="px-3 py-3.5 whitespace-nowrap">
+              <span class="text-[12px] text-gray-500" title={c.stateTime}>{formatCompactTime(c.stateTime)}</span>
               {#if c.state === 'running' && c.stateTime}
                 <span class="ml-1.5 text-[11px] text-emerald-600 font-medium" title={t.runningTime || '运行时间'}>⏱ {formatElapsed(c.stateTime)}</span>
               {/if}
             </td>
-            <td class="px-5 py-3.5 text-right" onclick={(e) => e.stopPropagation()}>
+            <td class="px-3 py-3.5 text-right whitespace-nowrap" onclick={(e) => e.stopPropagation()}>
               <div class="inline-flex items-center gap-1">
                 {#if c.state !== 'starting' && c.state !== 'stopping' && c.state !== 'removing'}
                   <!-- Tag edit button -->
@@ -1759,7 +1771,7 @@ let { t, onTabChange = () => {} } = $props();
         {/each}
       </tbody>
     </table>
-    <!-- Pagination -->
+    </div>
     {#if totalPages > 1}
       <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
         <span class="text-[11px] text-gray-400">
