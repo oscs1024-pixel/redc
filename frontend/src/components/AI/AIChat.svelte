@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SmartAgentChatStream, TroubleshootAgentChatStream, StopAgentStream, ResumeAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SmartAgentChatStream, TroubleshootAgentChatStream, StopAgentStream, ResumeAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse, OrchestratorStream } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
@@ -40,6 +40,7 @@
   let askUserPending = $state(null); // { conversationId, toolCallId, question, choices, allowFreeform }
   let askUserInput = $state('');
   let agentPlan = $state(null); // { title, steps: [{name, status, detail}], currentStep }
+  let orchestratorStatus = $state(null); // { round, maxRounds, phase, detail }
   let lastInterruptedConvId = $state(''); // Track last interrupted conversation for resume
   let lastUsage = $state(null); // { prompt_tokens, completion_tokens, total_tokens }
   // Conversation history state
@@ -54,14 +55,15 @@
     { id: 'free', labelKey: 'aiChatFreeChat', icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
     { id: 'agent', labelKey: 'aiChatAgent', icon: 'M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l5.3-5.3a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-7.18 7.18a1.5 1.5 0 01-2.12 0zM3.75 21h16.5' },
     { id: 'deploy', labelKey: 'aiChatDeploy', icon: 'M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z' },
+    { id: 'orchestrator', labelKey: 'aiChatOrchestrator', icon: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75' },
     { id: 'errorAnalysis', labelKey: 'aiChatErrorAnalysis', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' },
     { id: 'generate', labelKey: 'aiChatGenTemplate', icon: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5' },
     { id: 'recommend', labelKey: 'aiChatRecommend', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
     { id: 'cost', labelKey: 'aiChatCostOpt', icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
   ];
 
-  const modeLabels = { free: 'aiChatFreeChat', agent: 'aiChatAgent', deploy: 'aiChatDeploy', errorAnalysis: 'aiChatErrorAnalysis', generate: 'aiChatGenTemplate', recommend: 'aiChatRecommend', cost: 'aiChatCostOpt' };
-  const welcomeMessages = { free: 'aiChatWelcomeFree', agent: 'aiChatWelcomeAgent', deploy: 'aiChatWelcomeDeploy', errorAnalysis: 'aiChatWelcomeErrorAnalysis', generate: 'aiChatWelcomeGenerate', recommend: 'aiChatWelcomeRecommend', cost: 'aiChatWelcomeCost' };
+  const modeLabels = { free: 'aiChatFreeChat', agent: 'aiChatAgent', deploy: 'aiChatDeploy', orchestrator: 'aiChatOrchestrator', errorAnalysis: 'aiChatErrorAnalysis', generate: 'aiChatGenTemplate', recommend: 'aiChatRecommend', cost: 'aiChatCostOpt' };
+  const welcomeMessages = { free: 'aiChatWelcomeFree', agent: 'aiChatWelcomeAgent', deploy: 'aiChatWelcomeDeploy', orchestrator: 'aiChatWelcomeOrchestrator', errorAnalysis: 'aiChatWelcomeErrorAnalysis', generate: 'aiChatWelcomeGenerate', recommend: 'aiChatWelcomeRecommend', cost: 'aiChatWelcomeCost' };
 
   function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -88,6 +90,18 @@
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
+          // Deduplicate message IDs to prevent Svelte keyed-each errors
+          for (const conv of parsed) {
+            if (conv.messages) {
+              const seen = new Set();
+              for (const m of conv.messages) {
+                if (!m.id || seen.has(m.id)) {
+                  m.id = (m.id || 'msg') + '-' + generateId();
+                }
+                seen.add(m.id);
+              }
+            }
+          }
           conversations = parsed;
           return;
         }
@@ -235,6 +249,17 @@
         const usage = data.usage && data.usage.total_tokens > 0 ? data.usage : null;
 
         if (data.success && streamingContent) {
+          // Auto-complete plan steps when conversation ends successfully
+          if (agentPlan && agentPlan.steps) {
+            agentPlan = {
+              ...agentPlan,
+              steps: agentPlan.steps.map(s =>
+                s.status === 'running' || s.status === 'pending'
+                  ? { ...s, status: 'done' }
+                  : s
+              )
+            };
+          }
           // For agent mode, include tool call cards in the message
           const toolCards = agentToolCalls.length > 0 ? [...agentToolCalls] : undefined;
           const planSnapshot = agentPlan ? { ...agentPlan } : undefined;
@@ -286,6 +311,7 @@
         agentToolCalls = [];
         askUserPending = null;
         agentPlan = null;
+        orchestratorStatus = null;
         syncCurrentConversation();
       }
     });
@@ -354,12 +380,58 @@
         const msg = t.aiChatCompactNotice
           .replace('{before}', beforeK).replace('{after}', afterK).replace('{budget}', budgetK);
         messages = [...messages, {
-          id: 'compact-' + Date.now(),
+          id: 'compact-' + generateId(),
           role: 'system-notice',
           content: msg,
           timestamp: Date.now()
         }];
         toast.info(msg);
+        scrollToBottom();
+      }
+    });
+
+    EventsOn('ai-orchestrator-status', (data) => {
+      if (data.conversationId === currentConversationId) {
+        orchestratorStatus = {
+          round: data.round,
+          phase: data.phase,
+          detail: data.detail,
+        };
+        // Add phase transition as system notice
+        const phaseLabels = {
+          planning: t.aiOrchestratorPlanning || 'Planning',
+          executing: t.aiOrchestratorExecuting || 'Executing',
+          judging: t.aiOrchestratorJudging || 'Evaluating',
+          complete: t.aiOrchestratorComplete || 'Complete',
+          error: t.aiOrchestratorError || 'Error',
+        };
+        const label = phaseLabels[data.phase] || data.phase;
+        messages = [...messages, {
+          id: 'orch-' + generateId(),
+          role: 'system-notice',
+          content: `[${t.aiChatOrchestrator || 'Orchestrator'}] ${label}: ${data.detail}`,
+          timestamp: Date.now()
+        }];
+        scrollToBottom();
+      }
+    });
+
+    EventsOn('ai-orchestrator-judge', (data) => {
+      if (data.conversationId === currentConversationId) {
+        const eval_ = data.evaluation || {};
+        const confidence = Math.round((eval_.confidence || 0) * 100);
+        const judgeTitle = t.aiOrchestratorJudgeResult || 'Judge Evaluation';
+        let content = `**${judgeTitle}** (Round ${data.round})\n`;
+        content += `- ${t.aiOrchestratorConfidence || 'Confidence'}: ${confidence}%\n`;
+        if (eval_.feedback) content += `- ${t.aiOrchestratorFeedback || 'Feedback'}: ${eval_.feedback}\n`;
+        if (eval_.missing_areas?.length) content += `- ${t.aiOrchestratorMissing || 'Missing'}: ${eval_.missing_areas.join(', ')}\n`;
+        if (eval_.next_steps?.length) content += `- ${t.aiOrchestratorNextSteps || 'Next Steps'}: ${eval_.next_steps.join(', ')}\n`;
+        messages = [...messages, {
+          id: 'judge-' + generateId(),
+          role: 'system-notice',
+          content,
+          timestamp: Date.now()
+        }];
         scrollToBottom();
       }
     });
@@ -381,6 +453,8 @@
     EventsOff('ai-agent-tool-result');
     EventsOff('ai-agent-ask-user');
     EventsOff('ai-agent-plan');
+    EventsOff('ai-orchestrator-status');
+    EventsOff('ai-orchestrator-judge');
     window.removeEventListener('storage', handleStorage);
   });
 
@@ -528,6 +602,7 @@
     streamingContent = '';
     agentToolCalls = [];
     agentPlan = null;
+    orchestratorStatus = null;
     const convId = generateId();
     currentConversationId = convId;
 
@@ -538,7 +613,9 @@
       .map(m => ({ role: m.role, content: m.content }));
 
     try {
-      if (mode === 'agent') {
+      if (mode === 'orchestrator') {
+        await OrchestratorStream(convId, { maxRounds: 5, objective: text, autoApprove: false }, chatMessages);
+      } else if (mode === 'agent') {
         await SmartAgentChatStream(convId, chatMessages);
       } else if (mode === 'deploy') {
         await DeployAgentChatStream(convId, chatMessages);
@@ -811,7 +888,7 @@
 <div class="flex flex-col h-full px-6 pt-6 pb-4">
   <!-- Toolbar: mode tabs + actions -->
   <div class="flex items-center gap-3 mb-3 flex-shrink-0">
-    <div class="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 overflow-x-auto">
+    <div class="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 flex-wrap">
       {#each modes as m}
         <button
           class="px-2.5 py-1 text-[11px] rounded-md transition-colors cursor-pointer whitespace-nowrap {mode === m.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
@@ -1123,44 +1200,6 @@
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <!-- Agent plan progress card -->
-                  {#if agentPlan && agentPlan.steps && agentPlan.steps.length > 0}
-                    <div class="mb-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                      <div class="flex items-center gap-2 mb-2">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
-                        <span class="text-[12px] font-semibold text-blue-900">{agentPlan.title || t.agentPlanTitle || '执行计划'}</span>
-                        <span class="text-[10px] text-blue-500 ml-auto font-mono">
-                          {agentPlan.steps.filter(s => s.status === 'done').length}/{agentPlan.steps.length}
-                        </span>
-                      </div>
-                      <div class="space-y-1">
-                        {#each agentPlan.steps as step, i}
-                          <div class="flex items-start gap-1.5 text-[11px] {step.status === 'done' ? 'text-gray-400' : step.status === 'running' ? 'text-blue-700 font-medium' : step.status === 'failed' ? 'text-red-600' : step.status === 'skipped' ? 'text-gray-400 line-through' : 'text-gray-600'}">
-                            <span class="mt-px flex-shrink-0">
-                              {#if step.status === 'done'}<svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                              {:else if step.status === 'running'}<svg class="w-3.5 h-3.5 text-blue-600 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5.14v14l11-7-11-7z" /></svg>
-                              {:else if step.status === 'failed'}<svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                              {:else if step.status === 'skipped'}<svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811V8.69zM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061a1.125 1.125 0 01-1.683-.977V8.69z" /></svg>
-                              {:else}<svg class="w-3.5 h-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
-                              {/if}
-                            </span>
-                            <span>{i + 1}. {step.name || step.content}</span>
-                          </div>
-                          {#if step.detail && (step.status === 'running' || step.status === 'failed')}
-                            <div class="ml-6 text-[10px] text-gray-500 italic">{step.detail}</div>
-                          {/if}
-                        {/each}
-                      </div>
-                      <!-- Progress bar -->
-                      {#if agentPlan.steps.length > 0}
-                        {@const doneCount = agentPlan.steps.filter(s => s.status === 'done').length}
-                        {@const totalCount = agentPlan.steps.length}
-                        <div class="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                          <div class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: {totalCount > 0 ? (doneCount / totalCount * 100) : 0}%"></div>
-                        </div>
-                      {/if}
-                    </div>
-                  {/if}
                   <!-- Live agent tool call cards -->
                   {#if agentToolCalls.length > 0}
                     <div class="mb-2 space-y-1.5">
@@ -1300,6 +1339,57 @@
         <div class="h-1"></div>
       </div>
 
+      <!-- Sticky progress panel (plan + orchestrator status) above input -->
+      {#if isStreaming && (orchestratorStatus || (agentPlan && agentPlan.steps && agentPlan.steps.length > 0))}
+        <div class="flex-shrink-0 px-0.5 pb-2">
+          <!-- Orchestrator status -->
+          {#if orchestratorStatus}
+            <div class="mb-1.5 p-2 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
+              <div class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-purple-600 {orchestratorStatus.phase === 'executing' || orchestratorStatus.phase === 'judging' ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
+                <span class="text-[11px] font-semibold text-purple-800">{t.aiChatOrchestrator || 'Orchestrator'}</span>
+                <span class="text-[10px] text-purple-500 font-mono ml-auto">
+                  {orchestratorStatus.phase === 'complete' ? '✓' : orchestratorStatus.detail || ''}
+                </span>
+              </div>
+            </div>
+          {/if}
+          <!-- Agent plan -->
+          {#if agentPlan && agentPlan.steps && agentPlan.steps.length > 0}
+            <div class="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center gap-2 mb-1.5">
+                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
+                <span class="text-[11px] font-semibold text-blue-900">{agentPlan.title || t.agentPlanTitle || '执行计划'}</span>
+                <span class="text-[10px] text-blue-500 ml-auto font-mono">
+                  {agentPlan.steps.filter(s => s.status === 'done').length}/{agentPlan.steps.length}
+                </span>
+              </div>
+              <div class="space-y-0.5">
+                {#each agentPlan.steps as step, i}
+                  <div class="flex items-center gap-1.5 text-[11px] {step.status === 'done' ? 'text-gray-400' : step.status === 'running' ? 'text-blue-700 font-medium' : step.status === 'failed' ? 'text-red-600' : step.status === 'skipped' ? 'text-gray-400 line-through' : 'text-gray-600'}">
+                    <span class="flex-shrink-0">
+                      {#if step.status === 'done'}<svg class="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                      {:else if step.status === 'running'}<svg class="w-3 h-3 text-blue-600 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5.14v14l11-7-11-7z" /></svg>
+                      {:else if step.status === 'failed'}<svg class="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      {:else}<svg class="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                      {/if}
+                    </span>
+                    <span class="truncate">{i + 1}. {step.name || step.content}</span>
+                  </div>
+                {/each}
+              </div>
+              {#if agentPlan.steps.length > 0}
+                {@const doneCount = agentPlan.steps.filter(s => s.status === 'done').length}
+                {@const totalCount = agentPlan.steps.length}
+                <div class="mt-1.5 h-1 bg-blue-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: {totalCount > 0 ? (doneCount / totalCount * 100) : 0}%"></div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <!-- Input area -->
       <div class="flex-shrink-0 border-t border-gray-100 pt-3 pb-1 px-0.5">
         <div class="flex items-end gap-2">
@@ -1333,7 +1423,7 @@
             {/if}
             {t.aiChatSend || '发送'}
           </button>
-          {#if isStreaming && (mode === 'agent' || mode === 'deploy' || mode === 'errorAnalysis')}
+          {#if isStreaming && (mode === 'agent' || mode === 'deploy' || mode === 'errorAnalysis' || mode === 'orchestrator')}
             <button
               class="px-3 h-10 bg-red-600 text-white text-[12px] font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
               onclick={stopAgent}

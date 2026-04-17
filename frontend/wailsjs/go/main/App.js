@@ -634,6 +634,10 @@ export function MCPSwitchProject(arg1) {
   return window['go']['main']['App']['MCPSwitchProject'](arg1);
 }
 
+export function OrchestratorStream(arg1, arg2, arg3) {
+  return window['go']['main']['App']['OrchestratorStream'](arg1, arg2, arg3);
+}
+
 export function PullTemplate(arg1, arg2) {
   return window['go']['main']['App']['PullTemplate'](arg1, arg2);
 }

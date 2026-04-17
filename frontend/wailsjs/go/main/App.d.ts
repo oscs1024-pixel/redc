@@ -321,6 +321,8 @@ export function MCPStopCustomDeployment(arg1:string):Promise<void>;
 
 export function MCPSwitchProject(arg1:string):Promise<void>;
 
+export function OrchestratorStream(arg1:string,arg2:any,arg3:Array<any>):Promise<void>;
+
 export function PullTemplate(arg1:string,arg2:boolean):Promise<void>;
 
 export function RecommendTemplates(arg1:string):Promise<Array<main.TemplateRecommendation>>;

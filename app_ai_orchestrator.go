@@ -108,6 +108,9 @@ func (a *App) OrchestratorStream(conversationId string, config OrchestratorConfi
 	var failureHistory []string
 	var totalUsage ai.TokenUsage
 
+	// Safety hooks
+	hooks := ai.NewHookChain()
+
 	// Emit orchestrator status
 	emitOrchestratorStatus := func(round int, phase string, detail string) {
 		a.emitEvent("ai-orchestrator-status", map[string]interface{}{
@@ -120,6 +123,8 @@ func (a *App) OrchestratorStream(conversationId string, config OrchestratorConfi
 	}
 
 	// Multi-round orchestration loop
+	failoverRetries := 0
+	const maxFailoverRetries = 3
 	for round := 1; round <= maxRounds; round++ {
 		if ctx.Err() != nil {
 			break
@@ -154,25 +159,44 @@ func (a *App) OrchestratorStream(conversationId string, config OrchestratorConfi
 		emitOrchestratorStatus(round, "executing", fmt.Sprintf("Round %d/%d: Executing", round, maxRounds))
 
 		client := pm.CurrentClient()
+
+		// Context window management: compact if exceeding budget
+		contextBudget := 108000
+		if aiConfig.ContextWindow > 0 {
+			contextBudget = aiConfig.ContextWindow * 9 / 10
+		}
+		if estimated := ai.EstimateTokens(aiMessages); estimated > contextBudget {
+			compactCtx, compactCancel := context.WithTimeout(ctx, 35*time.Second)
+			aiMessages = ai.CompactWithLLM(compactCtx, client, aiMessages, ai.CompactOptions{
+				KeepRecentRounds: 4,
+				ContextBudget:    contextBudget,
+				MaxSummaryTokens: 2000,
+			})
+			compactCancel()
+			gologger.Info().Msgf("orchestrator: context compacted from ~%d to ~%d tokens in round %d", estimated, ai.EstimateTokens(aiMessages), round)
+		}
+
 		maxToolRounds := 30
 		if aiConfig.MaxToolRounds > 0 {
 			maxToolRounds = aiConfig.MaxToolRounds
 		}
 
 		var roundContent string
-		roundErr := a.executeOrchestratorRound(ctx, client, aiMessages, toolDefs, mcpServer, conversationId, maxToolRounds, &totalUsage, &roundContent)
+		roundErr := a.executeOrchestratorRound(ctx, client, aiMessages, toolDefs, mcpServer, conversationId, maxToolRounds, &totalUsage, &roundContent, hooks, config.AutoApprove)
 
 		if roundErr != nil {
 			failureHistory = append(failureHistory, fmt.Sprintf("Round %d failed: %s", round, roundErr.Error()))
-			// Try failover
-			if ai.ShouldFailover(roundErr.Error()) && pm.Failover(roundErr.Error()) {
-				gologger.Info().Msgf("orchestrator: failover triggered in round %d", round)
+			// Try failover (with retry limit to prevent infinite loop)
+			if failoverRetries < maxFailoverRetries && ai.ShouldFailover(roundErr.Error()) && pm.Failover(roundErr.Error()) {
+				gologger.Info().Msgf("orchestrator: failover triggered in round %d (retry %d/%d)", round, failoverRetries+1, maxFailoverRetries)
+				failoverRetries++
 				round-- // Retry this round with new provider
 				continue
 			}
 			emitOrchestratorStatus(round, "error", roundErr.Error())
 			continue
 		}
+		failoverRetries = 0 // Reset on success
 
 		// Judge evaluation
 		emitOrchestratorStatus(round, "judging", fmt.Sprintf("Round %d/%d: Evaluating results", round, maxRounds))
@@ -227,7 +251,7 @@ func (a *App) OrchestratorStream(conversationId string, config OrchestratorConfi
 }
 
 // executeOrchestratorRound runs a single agent round within the orchestrator.
-func (a *App) executeOrchestratorRound(ctx context.Context, client *ai.Client, messages []ai.Message, toolDefs []ai.ToolDefinition, mcpServer *mcp.MCPServer, conversationId string, maxToolRounds int, totalUsage *ai.TokenUsage, roundContent *string) error {
+func (a *App) executeOrchestratorRound(ctx context.Context, client *ai.Client, messages []ai.Message, toolDefs []ai.ToolDefinition, mcpServer *mcp.MCPServer, conversationId string, maxToolRounds int, totalUsage *ai.TokenUsage, roundContent *string, hooks *ai.HookChain, autoApprove bool) error {
 	var contentBuilder strings.Builder
 
 	for step := 0; step < maxToolRounds; step++ {
@@ -264,6 +288,51 @@ func (a *App) executeOrchestratorRound(ctx context.Context, client *ai.Client, m
 
 		for _, tc := range resp.ToolCalls {
 			args := parseToolArgs(tc)
+
+			// Run safety pre-hooks
+			hookResult := hooks.RunPreHooks(tc.Function.Name, args)
+			if hookResult.Action == ai.HookBlock {
+				resultContent := fmt.Sprintf("⛔ Blocked by safety hook: %s", hookResult.Message)
+				a.emitEvent("ai-agent-tool-result", map[string]interface{}{
+					"conversationId": conversationId,
+					"toolCallId":     tc.ID,
+					"toolName":       tc.Function.Name,
+					"success":        false,
+					"content":        resultContent,
+				})
+				messages = append(messages, ai.Message{
+					Role: "tool", Content: resultContent, ToolCallID: tc.ID, Name: tc.Function.Name,
+				})
+				continue
+			}
+			if hookResult.Action == ai.HookConfirm {
+				if autoApprove {
+					gologger.Info().Msgf("orchestrator: auto-approved %s (autoApprove=true)", tc.Function.Name)
+				} else {
+					// Use ask_user mechanism for confirmation
+					confirmResult, _ := a.handleAskUser(map[string]interface{}{
+						"question":       hookResult.Message,
+						"choices":        []interface{}{"Yes, proceed", "No, cancel"},
+						"allow_freeform": false,
+					}, conversationId, ctx)
+					if !strings.Contains(strings.ToLower(confirmResult), "yes") &&
+						!strings.Contains(strings.ToLower(confirmResult), "proceed") {
+						resultContent := "Operation cancelled by user."
+						a.emitEvent("ai-agent-tool-result", map[string]interface{}{
+							"conversationId": conversationId,
+							"toolCallId":     tc.ID,
+							"toolName":       tc.Function.Name,
+							"success":        false,
+							"content":        resultContent,
+						})
+						messages = append(messages, ai.Message{
+							Role: "tool", Content: resultContent, ToolCallID: tc.ID, Name: tc.Function.Name,
+						})
+						continue
+					}
+				}
+			}
+
 			a.emitEvent("ai-agent-tool-call", map[string]interface{}{
 				"conversationId": conversationId,
 				"toolCallId":     tc.ID,
@@ -272,6 +341,9 @@ func (a *App) executeOrchestratorRound(ctx context.Context, client *ai.Client, m
 			})
 
 			resultContent, success := a.executeSingleTool(tc, args, mcpServer, conversationId, ctx)
+
+			// Run post-hooks (annotations)
+			resultContent = hooks.RunPostHooks(tc.Function.Name, args, resultContent, success)
 
 			const maxLen = 8000
 			if len(resultContent) > maxLen {
