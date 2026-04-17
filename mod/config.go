@@ -1,6 +1,7 @@
 package mod
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -466,4 +467,19 @@ func NewProxyHTTPClient(timeout time.Duration) *http.Client {
 	}
 
 	return &http.Client{Timeout: timeout}
+}
+
+// newTLSSkipClient returns an HTTP client that skips TLS certificate verification.
+// Only use for trusted first-party domains (e.g., f8x.wgpsec.org).
+func newTLSSkipClient(timeout time.Duration) *http.Client {
+	proxyURL := GetProxyURL()
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	if proxyURL != "" {
+		if proxy, err := url.Parse(proxyURL); err == nil {
+			transport.Proxy = http.ProxyURL(proxy)
+		}
+	}
+	return &http.Client{Timeout: timeout, Transport: transport}
 }

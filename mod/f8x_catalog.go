@@ -92,7 +92,9 @@ func FetchF8xRemoteCatalog() (*F8xRemoteCatalog, error) {
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	// Use TLS-skip client for f8x.wgpsec.org (our own domain, cert may expire)
+	client := newTLSSkipClient(10 * time.Second)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
