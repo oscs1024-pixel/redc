@@ -1111,36 +1111,36 @@
 </div>
 
 <style>
-  /* Markdown content styles */
-  .md-content :global(h1) { font-size: 1.25em; font-weight: 700; margin: 0.8em 0 0.4em; }
-  .md-content :global(h2) { font-size: 1.1em; font-weight: 600; margin: 0.7em 0 0.3em; }
-  .md-content :global(h3) { font-size: 1em; font-weight: 600; margin: 0.6em 0 0.3em; }
-  .md-content :global(p) { margin: 0.4em 0; }
-  .md-content :global(ul), .md-content :global(ol) { margin: 0.4em 0; padding-left: 1.5em; }
-  .md-content :global(li) { margin: 0.2em 0; }
-  .md-content :global(code) {
+  /* Markdown content styles — global because md-content renders in child components */
+  :global(.md-content h1) { font-size: 1.25em; font-weight: 700; margin: 0.8em 0 0.4em; }
+  :global(.md-content h2) { font-size: 1.1em; font-weight: 600; margin: 0.7em 0 0.3em; }
+  :global(.md-content h3) { font-size: 1em; font-weight: 600; margin: 0.6em 0 0.3em; }
+  :global(.md-content p) { margin: 0.4em 0; }
+  :global(.md-content ul), :global(.md-content ol) { margin: 0.4em 0; padding-left: 1.5em; }
+  :global(.md-content li) { margin: 0.2em 0; }
+  :global(.md-content code) {
     background: #f3f4f6; padding: 0.15em 0.4em; border-radius: 4px;
     font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
   }
-  .md-content :global(pre) {
+  :global(.md-content pre) {
     background: #1f2937; color: #e5e7eb; padding: 0.8em 1em; border-radius: 8px;
     overflow-x: auto; margin: 0.5em 0; font-size: 0.85em; line-height: 1.6;
   }
-  .md-content :global(pre code) {
+  :global(.md-content pre code) {
     background: none; padding: 0; color: inherit; font-size: inherit;
   }
-  .md-content :global(blockquote) {
+  :global(.md-content blockquote) {
     border-left: 3px solid #d1d5db; padding-left: 0.8em; margin: 0.5em 0;
     color: #6b7280; font-style: italic;
   }
-  .md-content :global(table) { width: 100%; border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
-  .md-content :global(th), .md-content :global(td) { border: 1px solid #e5e7eb; padding: 0.4em 0.6em; text-align: left; }
-  .md-content :global(th) { background: #f9fafb; font-weight: 600; }
-  .md-content :global(hr) { border: none; border-top: 1px solid #e5e7eb; margin: 0.8em 0; }
-  .md-content :global(a) { color: #2563eb; text-decoration: underline; }
-  .md-content :global(strong) { font-weight: 600; }
-  .md-content :global(> *:first-child) { margin-top: 0; }
-  .md-content :global(> *:last-child) { margin-bottom: 0; }
+  :global(.md-content table) { width: 100%; border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
+  :global(.md-content th), :global(.md-content td) { border: 1px solid #e5e7eb; padding: 0.4em 0.6em; text-align: left; }
+  :global(.md-content th) { background: #f9fafb; font-weight: 600; }
+  :global(.md-content hr) { border: none; border-top: 1px solid #e5e7eb; margin: 0.8em 0; }
+  :global(.md-content a) { color: #2563eb; text-decoration: underline; }
+  :global(.md-content strong) { font-weight: 600; }
+  :global(.md-content > *:first-child) { margin-top: 0; }
+  :global(.md-content > *:last-child) { margin-bottom: 0; }
 
   /* Code block copy button */
   :global(.code-copy-btn) {
