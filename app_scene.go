@@ -86,12 +86,14 @@ func (a *App) StartCase(caseID string) error {
 		a.emitLog(i18n.Tf("app_scene_starting", caseName))
 		if err := c.TfApply(); err != nil {
 			a.emitLog(i18n.Tf("app_scene_start_failed", err))
+			a.logTimeline("scene", "scene_error", caseID, caseName, i18n.Tf("app_scene_start_failed", err), "", "error")
 			if a.notificationMgr != nil {
 				a.notificationMgr.SendSceneFailed(caseName, "启动")
 			}
 			return
 		}
 		a.emitLog(i18n.Tf("app_scene_start_success", caseName))
+		a.logTimeline("scene", "scene_started", caseID, caseName, i18n.Tf("app_scene_start_success", caseName), "", "success")
 
 		if a.notificationMgr != nil {
 			a.notificationMgr.SendSceneStarted(caseName)
@@ -139,12 +141,14 @@ func (a *App) StopCase(caseID string) error {
 		a.emitLog(i18n.Tf("app_stopping_scene", c.Name))
 		if err := c.Stop(); err != nil {
 			a.emitLog(i18n.Tf("app_scene_stop_failed", err))
+			a.logTimeline("scene", "scene_error", caseID, c.Name, i18n.Tf("app_scene_stop_failed", err), "", "error")
 			if a.notificationMgr != nil {
 				a.notificationMgr.SendSceneFailed(c.Name, "停止")
 			}
 			return
 		}
 		a.emitLog(i18n.Tf("app_scene_stop_success", c.Name))
+		a.logTimeline("scene", "scene_stopped", caseID, c.Name, i18n.Tf("app_scene_stop_success", c.Name), "", "info")
 
 		if a.notificationMgr != nil {
 			a.notificationMgr.SendSceneStopped(c.Name)
@@ -184,6 +188,7 @@ func (a *App) RemoveCase(caseID string) error {
 			return
 		}
 		a.emitLog(i18n.Tf("app_scene_delete_success", c.Name))
+		a.logTimeline("scene", "scene_removed", caseID, c.Name, i18n.Tf("app_scene_delete_success", c.Name), "", "info")
 	}()
 
 	return nil
@@ -250,6 +255,7 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 			return
 		}
 		a.emitLog(i18n.Tf("app_scene_create_success", c.Name, c.GetId()))
+		a.logTimeline("scene", "scene_created", c.GetId(), c.Name, i18n.Tf("app_scene_create_success", c.Name, c.GetId()), "", "info")
 
 		// Wire plugin hooks
 		if a.pluginMgr != nil {
@@ -260,10 +266,12 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 
 		if err := c.TfApply(); err != nil {
 			a.emitLog(i18n.Tf("app_scene_start_failed", err))
+			a.logTimeline("scene", "scene_error", c.GetId(), c.Name, i18n.Tf("app_scene_start_failed", err), "", "error")
 			return
 		}
 
 		a.emitLog(i18n.Tf("app_scene_start_success", c.Name))
+		a.logTimeline("scene", "scene_started", c.GetId(), c.Name, i18n.Tf("app_scene_start_success", c.Name), "", "success")
 
 		if outputs, err := c.TfOutput(); err == nil {
 			for key, meta := range outputs {

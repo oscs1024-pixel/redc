@@ -5,7 +5,8 @@
       "date": "2026-04-17",
       "changes": [
         "优化：预定义场景表格布局 — 状态、时间、操作按钮等列添加 whitespace-nowrap 防止换行，列间距收紧（px-5→px-3），时间显示简化为 MM-DD HH:mm 格式（悬停查看完整时间）",
-        "新增：Spot 恢复后自动重新执行插件 — 抢占式实例恢复后自动刷新 Terraform 输出并重新触发 post-apply 插件钩子（如 clash-config、upload-r2），确保新 IP 生效"
+        "新增：Spot 恢复后自动重新执行插件 — 抢占式实例恢复后自动刷新 Terraform 输出并重新触发 post-apply 插件钩子（如 clash-config、upload-r2），确保新 IP 生效",
+        "新增：事件时间线 — 控制台页面新增事件时间线视图，通过 Segmented Control 切换终端日志/事件时间线，持久化记录场景生命周期、插件执行、Spot 抢占恢复等关键事件，支持分类筛选、搜索和分页"
       ]
     },
     {

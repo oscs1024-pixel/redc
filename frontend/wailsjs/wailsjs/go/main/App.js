@@ -66,6 +66,10 @@ export function ClearAuditLogs() {
   return window['go']['main']['App']['ClearAuditLogs']();
 }
 
+export function ClearTimeline() {
+  return window['go']['main']['App']['ClearTimeline']();
+}
+
 export function CloneCase(arg1, arg2) {
   return window['go']['main']['App']['CloneCase'](arg1, arg2);
 }
@@ -520,6 +524,10 @@ export function ListSkills(arg1) {
 
 export function ListTemplates() {
   return window['go']['main']['App']['ListTemplates']();
+}
+
+export function ListTimelineEvents(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ListTimelineEvents'](arg1, arg2, arg3, arg4);
 }
 
 export function ListUserdataTemplates() {

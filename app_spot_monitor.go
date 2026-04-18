@@ -225,6 +225,7 @@ func (m *SpotMonitor) handleTerminated(c *redc.Case, downIPs []string, totalIPs 
 	// Log
 	msg := fmt.Sprintf("⚠️ %s", i18n.Tf("app_spot_terminated", detail))
 	m.app.emitLog(msg)
+	m.app.logTimeline("spot", "spot_terminated", c.Id, c.Name, i18n.Tf("app_spot_terminated", detail), fmt.Sprintf(`{"downIPs":%q}`, ipList), "warning")
 
 	// Send system notification
 	if m.app.notificationMgr != nil {
@@ -253,6 +254,7 @@ func (m *SpotMonitor) isAutoRecoverEnabled() bool {
 // Uses low-level TfPlan/TfApply directly to bypass the state==running check in Case.TfApply().
 func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 	m.app.emitLog(fmt.Sprintf("🔄 %s", i18n.Tf("app_spot_recovering", c.Name)))
+	m.app.logTimeline("spot", "spot_recovering", c.Id, c.Name, i18n.Tf("app_spot_recovering", c.Name), "", "info")
 
 	// Emit recovering event
 	m.app.emitEvent( "spot-recovering", map[string]interface{}{
@@ -263,6 +265,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 	// Run terraform plan + apply directly (bypass Case.TfApply which rejects running state)
 	if err := redc.TfPlan(c.Path, c.Parameter...); err != nil {
 		m.app.emitLog(fmt.Sprintf("❌ %s", i18n.Tf("app_spot_recover_failed", c.Name, err)))
+		m.app.logTimeline("spot", "spot_recover_failed", c.Id, c.Name, i18n.Tf("app_spot_recover_failed", c.Name, err), "", "error")
 		if m.app.notificationMgr != nil {
 			m.app.notificationMgr.SendSpotRecoverFailed(c.Name)
 		}
@@ -276,6 +279,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 
 	if err := redc.TfApply(c.Path, c.Parameter...); err != nil {
 		m.app.emitLog(fmt.Sprintf("❌ %s", i18n.Tf("app_spot_recover_failed", c.Name, err)))
+		m.app.logTimeline("spot", "spot_recover_failed", c.Id, c.Name, i18n.Tf("app_spot_recover_failed", c.Name, err), "", "error")
 		// Rollback: destroy partially created resources to avoid orphaned instances
 		m.app.emitLog(fmt.Sprintf("🧹 %s", i18n.Tf("app_spot_recover_rollback", c.Name)))
 		if destroyErr := redc.TfDestroy(c.Path, c.Parameter); destroyErr != nil {
@@ -317,6 +321,7 @@ func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
 	m.ResetAlert(c.Id)
 
 	m.app.emitLog(fmt.Sprintf("✅ %s", i18n.Tf("app_spot_recovered", c.Name)))
+	m.app.logTimeline("spot", "spot_recovered", c.Id, c.Name, i18n.Tf("app_spot_recovered", c.Name), "", "success")
 	if m.app.notificationMgr != nil {
 		m.app.notificationMgr.SendSpotRecovered(c.Name)
 	}

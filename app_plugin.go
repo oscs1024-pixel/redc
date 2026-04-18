@@ -158,7 +158,13 @@ func (a *App) setupPluginHooks(c *redc.Case) {
 			CaseVars:       caseVars,
 			AllowedPlugins: allowed,
 		}
-		return a.pluginMgr.RunHooks(hookPoint, ctx)
+		err := a.pluginMgr.RunHooks(hookPoint, ctx)
+		if err != nil {
+			a.logTimeline("plugin", "plugin_failed", cc.GetId(), cc.Name, fmt.Sprintf("Plugin hook %s failed: %v", hookPoint, err), "", "error")
+		} else {
+			a.logTimeline("plugin", "plugin_executed", cc.GetId(), cc.Name, fmt.Sprintf("Plugin hook %s executed", hookPoint), "", "info")
+		}
+		return err
 	})
 }
 

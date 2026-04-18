@@ -1,9 +1,10 @@
 <script>
   import { onMount } from 'svelte';
-  import { ExportConsoleLogs } from '../../../wailsjs/go/main/App.js';
+  import { ExportConsoleLogs, ListTimelineEvents, ClearTimeline } from '../../../wailsjs/go/main/App.js';
   
   let { logs = $bindable([]), t = {} } = $props();
   
+  let activeView = $state('logs'); // 'logs' | 'timeline'
   let searchQuery = $state('');
   let levelFilter = $state('all'); // 'all' | 'error' | 'warn' | 'success'
   let autoScroll = $state(true);
@@ -121,6 +122,130 @@
   export function clearLogs() {
     logs = [];
   }
+
+  // ─── Timeline state ───
+  let timelineEvents = $state([]);
+  let timelineTotal = $state(0);
+  let timelineLoading = $state(false);
+  let timelinePage = $state(1);
+  let timelineCategory = $state('');
+  let timelineSearch = $state('');
+  let timelinePageSize = 50;
+
+  let timelineTotalPages = $derived(Math.max(1, Math.ceil(timelineTotal / timelinePageSize)));
+
+  async function loadTimeline() {
+    timelineLoading = true;
+    try {
+      const offset = (timelinePage - 1) * timelinePageSize;
+      const result = await ListTimelineEvents(timelinePageSize, offset, timelineCategory, timelineSearch.trim());
+      timelineEvents = result?.events || [];
+      timelineTotal = result?.total || 0;
+    } catch (e) {
+      console.error('Failed to load timeline:', e);
+      timelineEvents = [];
+      timelineTotal = 0;
+    } finally {
+      timelineLoading = false;
+    }
+  }
+
+  async function clearTimelineEvents() {
+    if (!confirm(t.timelineClearConfirm || '确定清空所有事件记录？')) return;
+    try {
+      await ClearTimeline();
+      timelineEvents = [];
+      timelineTotal = 0;
+      timelinePage = 1;
+    } catch (e) {
+      console.error('Failed to clear timeline:', e);
+    }
+  }
+
+  function switchView(view) {
+    activeView = view;
+    if (view === 'timeline' && timelineEvents.length === 0) {
+      loadTimeline();
+    }
+  }
+
+  function setTimelineCategory(cat) {
+    timelineCategory = cat;
+    timelinePage = 1;
+    loadTimeline();
+  }
+
+  function timelineSearchKeydown(e) {
+    if (e.key === 'Enter') {
+      timelinePage = 1;
+      loadTimeline();
+    }
+  }
+
+  function prevPage() {
+    if (timelinePage > 1) {
+      timelinePage--;
+      loadTimeline();
+    }
+  }
+
+  function nextPage() {
+    if (timelinePage < timelineTotalPages) {
+      timelinePage++;
+      loadTimeline();
+    }
+  }
+
+  function getLevelIcon(level) {
+    switch (level) {
+      case 'success': return '✓';
+      case 'warning': return '⚠';
+      case 'error': return '✗';
+      default: return '●';
+    }
+  }
+
+  function getLevelStyle(level) {
+    switch (level) {
+      case 'success': return 'text-emerald-400 bg-emerald-500/10';
+      case 'warning': return 'text-amber-400 bg-amber-500/10';
+      case 'error': return 'text-red-400 bg-red-500/10';
+      default: return 'text-blue-400 bg-blue-500/10';
+    }
+  }
+
+  function getLevelDotColor(level) {
+    switch (level) {
+      case 'success': return 'bg-emerald-500';
+      case 'warning': return 'bg-amber-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-blue-500';
+    }
+  }
+
+  function getCategoryLabel(cat) {
+    const labels = { scene: t.timelineCatScene || '场景', plugin: t.timelineCatPlugin || '插件', spot: t.timelineCatSpot || '抢占', ssh: t.timelineCatSSH || 'SSH', system: t.timelineCatSystem || '系统' };
+    return labels[cat] || cat;
+  }
+
+  function formatTimelineTime(ts) {
+    if (!ts) return '';
+    // "2026-04-17 14:05:23" → "04-17 14:05"
+    const parts = ts.split(' ');
+    if (parts.length < 2) return ts;
+    const date = parts[0].substring(5); // MM-DD
+    const time = parts[1].substring(0, 5); // HH:MM
+    return `${date} ${time}`;
+  }
+
+  const categoryFilters = $derived([
+    { key: '', label: t.timelineCatAll || '全部' },
+    { key: 'scene', label: t.timelineCatScene || '场景' },
+    { key: 'plugin', label: t.timelineCatPlugin || '插件' },
+    { key: 'spot', label: t.timelineCatSpot || '抢占' },
+    { key: 'ssh', label: t.timelineCatSSH || 'SSH' },
+    { key: 'system', label: t.timelineCatSystem || '系统' },
+  ]);
 </script>
 
 <div class="h-full flex flex-col bg-[#1e1e1e] rounded-xl overflow-hidden relative">
@@ -132,9 +257,19 @@
         <span class="w-3 h-3 rounded-full bg-[#ffbd2e]"></span>
         <span class="w-3 h-3 rounded-full bg-[#27ca40]"></span>
       </div>
-      <span class="text-[12px] text-gray-500 ml-2">{t.terminal}</span>
-      <!-- Log counts -->
-      {#if logs.length > 0}
+      <!-- Segmented Control -->
+      <div class="flex gap-0.5 bg-[#1e1e1e] rounded-md p-0.5 ml-2">
+        <button
+          onclick={() => switchView('logs')}
+          class="px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer {activeView === 'logs' ? 'bg-[#3c3c3c] text-gray-200 font-medium shadow-sm' : 'text-gray-500 hover:text-gray-300'}"
+        >{t.consoleTabLogs || '终端日志'}</button>
+        <button
+          onclick={() => switchView('timeline')}
+          class="px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer {activeView === 'timeline' ? 'bg-[#3c3c3c] text-gray-200 font-medium shadow-sm' : 'text-gray-500 hover:text-gray-300'}"
+        >{t.consoleTabTimeline || '事件时间线'}</button>
+      </div>
+      <!-- Log counts (only show in logs view) -->
+      {#if activeView === 'logs' && logs.length > 0}
         <span class="text-[10px] text-gray-600 ml-1 tabular-nums">{logs.length}</span>
         {#if errorCount > 0}
           <span class="text-[10px] text-red-400 tabular-nums">{errorCount} {t.consoleErrors || 'err'}</span>
@@ -143,7 +278,12 @@
           <span class="text-[10px] text-yellow-400 tabular-nums">{warnCount} {t.consoleWarns || 'warn'}</span>
         {/if}
       {/if}
+      {#if activeView === 'timeline'}
+        <span class="text-[10px] text-gray-600 ml-1 tabular-nums">{timelineTotal}</span>
+      {/if}
     </div>
+
+    {#if activeView === 'logs'}
     <div class="flex items-center gap-2">
       <!-- Search -->
       <div class="relative">
@@ -181,8 +321,51 @@
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
       </button>
     </div>
+    {:else}
+    <!-- Timeline toolbar -->
+    <div class="flex items-center gap-2">
+      <!-- Category filter pills -->
+      <div class="flex items-center gap-0.5 bg-[#1e1e1e] rounded p-0.5">
+        {#each categoryFilters as cat}
+          <button
+            class="h-5 px-1.5 text-[10px] rounded transition-colors cursor-pointer {timelineCategory === cat.key ? 'bg-[#3c3c3c] text-gray-300' : 'text-gray-600 hover:text-gray-400'}"
+            onclick={() => setTimelineCategory(cat.key)}
+          >{cat.label}</button>
+        {/each}
+      </div>
+      <!-- Search -->
+      <div class="relative">
+        <input
+          type="text"
+          bind:value={timelineSearch}
+          onkeydown={timelineSearchKeydown}
+          placeholder={t.timelineSearch || '搜索事件...'}
+          class="h-6 w-36 pl-6 pr-2 text-[11px] bg-[#3c3c3c] text-gray-300 rounded border border-[#4c4c4c] focus:border-gray-500 focus:outline-none placeholder-gray-600"
+        />
+        <svg class="w-3 h-3 text-gray-600 absolute left-2 top-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+      </div>
+      <!-- Refresh -->
+      <button
+        class="h-6 w-6 flex items-center justify-center text-gray-600 hover:text-gray-300 transition-colors cursor-pointer rounded hover:bg-[#3c3c3c]"
+        onclick={loadTimeline}
+        title={t.refresh || '刷新'}
+      >
+        <svg class="w-3.5 h-3.5 {timelineLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+      </button>
+      <!-- Clear -->
+      <button
+        class="h-6 w-6 flex items-center justify-center text-gray-600 hover:text-gray-300 transition-colors cursor-pointer rounded hover:bg-[#3c3c3c] disabled:opacity-30"
+        onclick={clearTimelineEvents}
+        disabled={timelineTotal === 0}
+        title={t.timelineClear || '清空时间线'}
+      >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+      </button>
+    </div>
+    {/if}
   </div>
 
+  {#if activeView === 'logs'}
   <!-- Log area -->
   <div 
     class="flex-1 px-4 py-3 overflow-auto font-mono text-[12px] leading-5 relative"
@@ -251,5 +434,71 @@
     >
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
     </button>
+  {/if}
+
+  {:else}
+  <!-- Timeline view -->
+  <div class="flex-1 overflow-auto px-4 py-3">
+    {#if timelineLoading}
+      <div class="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
+        <div class="w-5 h-5 border-2 border-gray-600 border-t-gray-300 rounded-full animate-spin"></div>
+        <span class="text-[12px]">{t.loading || '加载中...'}</span>
+      </div>
+    {:else if timelineEvents.length === 0}
+      <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+        <svg class="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        <div class="text-[12px]">{t.timelineEmpty || '暂无事件记录'}</div>
+      </div>
+    {:else}
+      <!-- Timeline list -->
+      <div class="relative pl-6">
+        <!-- Vertical line -->
+        <div class="absolute left-[7px] top-2 bottom-2 w-px bg-[#3c3c3c]"></div>
+
+        {#each timelineEvents as event}
+          <div class="relative flex items-start gap-3 py-2 group">
+            <!-- Dot on the line -->
+            <div class="absolute left-[-17px] top-[10px] w-2.5 h-2.5 rounded-full border-2 border-[#1e1e1e] {getLevelDotColor(event.level)} z-10"></div>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] text-gray-600 tabular-nums flex-shrink-0">{formatTimelineTime(event.timestamp)}</span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium {getLevelStyle(event.level)}">{getCategoryLabel(event.category)}</span>
+                {#if event.caseName}
+                  <span class="text-[10px] text-gray-500 truncate max-w-[160px]" title={event.caseName}>{event.caseName}</span>
+                {/if}
+              </div>
+              <div class="text-[12px] text-gray-300 mt-0.5 break-all">{event.message}</div>
+            </div>
+
+            <!-- Level icon -->
+            <div class="flex-shrink-0 mt-1">
+              <span class="text-[11px] {event.level === 'success' ? 'text-emerald-400' : event.level === 'warning' ? 'text-amber-400' : event.level === 'error' ? 'text-red-400' : 'text-blue-400'}">{getLevelIcon(event.level)}</span>
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <!-- Pagination -->
+      {#if timelineTotalPages > 1}
+        <div class="flex items-center justify-center gap-3 pt-3 mt-2 border-t border-[#3c3c3c]">
+          <button
+            class="h-6 px-2 text-[11px] text-gray-500 hover:text-gray-300 disabled:opacity-30 disabled:cursor-default cursor-pointer rounded hover:bg-[#3c3c3c] transition-colors"
+            onclick={prevPage}
+            disabled={timelinePage <= 1}
+          >← {t.timelinePrev || '上一页'}</button>
+          <span class="text-[10px] text-gray-600 tabular-nums">{timelinePage} / {timelineTotalPages}</span>
+          <button
+            class="h-6 px-2 text-[11px] text-gray-500 hover:text-gray-300 disabled:opacity-30 disabled:cursor-default cursor-pointer rounded hover:bg-[#3c3c3c] transition-colors"
+            onclick={nextPage}
+            disabled={timelinePage >= timelineTotalPages}
+          >{t.timelineNext || '下一页'} →</button>
+        </div>
+      {/if}
+    {/if}
+  </div>
   {/if}
 </div>

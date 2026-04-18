@@ -40,6 +40,8 @@ export function CheckForUpdates():Promise<main.VersionCheckResult>;
 
 export function ClearAuditLogs():Promise<void>;
 
+export function ClearTimeline():Promise<void>;
+
 export function CloneCase(arg1:string,arg2:string):Promise<void>;
 
 export function CloneCustomDeployment(arg1:string,arg2:string):Promise<mod.CustomDeployment>;
@@ -267,6 +269,8 @@ export function ListScheduledTasks():Promise<Array<mod.ScheduledTask>>;
 export function ListSkills(arg1:string):Promise<Array<ai.SkillIndex>>;
 
 export function ListTemplates():Promise<Array<main.TemplateInfo>>;
+
+export function ListTimelineEvents(arg1:number,arg2:number,arg3:string,arg4:string):Promise<mod.TimelineListResult>;
 
 export function ListUserdataTemplates():Promise<Array<mod.UserdataTemplate>>;
 

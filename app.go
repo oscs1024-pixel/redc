@@ -39,6 +39,7 @@ type App struct {
 	configStore             *redc.ConfigStore
 	pluginMgr               *plugin.PluginManager
 	auditStore              *redc.AuditStore
+	timelineStore           *redc.TimelineStore
 	disableRightClick       bool
 	httpSrv                 *HTTPServer
 	wailsMode               bool // true when running inside Wails desktop
@@ -81,6 +82,9 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.spotMonitor != nil {
 		a.spotMonitor.Stop()
 		a.spotMonitor = nil
+	}
+	if a.timelineStore != nil {
+		a.timelineStore.Close()
 	}
 }
 
@@ -283,6 +287,15 @@ func (a *App) startup(ctx context.Context) {
 		fmt.Println("[INFO] Audit log store initialized")
 	} else {
 		fmt.Printf("[WARN] Audit log store init failed: %v\n", err)
+	}
+
+	// Initialize timeline store
+	if ts, err := redc.NewTimelineStore(); err == nil {
+		a.timelineStore = ts
+		fmt.Println("[INFO] Timeline store initialized")
+		a.logTimeline("system", "app_started", "", "", i18n.T("app_timeline_app_started"), "", "info")
+	} else {
+		fmt.Printf("[WARN] Timeline store init failed: %v\n", err)
 	}
 
 	// Start spot instance termination monitor (if enabled in settings)

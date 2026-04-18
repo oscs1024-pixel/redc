@@ -444,3 +444,7 @@ export function ValidateTemplate(arg1:string):Promise<main.TemplateValidateResul
 export function WriteRemoteFileContent(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function WriteToTerminal(arg1:string,arg2:string):Promise<void>;
+
+export function ListTimelineEvents(arg1:number,arg2:number,arg3:string,arg4:string):Promise<mod.TimelineListResult>;
+
+export function ClearTimeline():Promise<void>;
