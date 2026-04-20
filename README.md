@@ -36,6 +36,7 @@
 - **[AI Operations Skills](.claude/skills/useage/SKILL.md)** - Comprehensive guide for AI agents and automation tools
 - **[MCP Protocol Support](doc/MCP.md)** - Model Context Protocol integration for AI assistants
 - **[Compose Orchestration Guide](doc/Compose.md)** - Best practices for multi-service orchestration
+- **[Plugin Development Guide](https://github.com/wgpsec/redc-template/blob/main/doc/plugin-development.md)** - How to write your own RedC plugin
 - **[Template Repository](https://github.com/wgpsec/redc-template)** - Pre-configured infrastructure templates
 - **[Online Templates](https://redc.wgpsec.org/)** - Browse and download templates
 

@@ -36,6 +36,7 @@
 - **[AI 运维 Skills](.claude/skills/useage/SKILL_CN.md)** - AI 代理和自动化工具的综合指南
 - **[MCP 协议支持](doc/MCP_CN.md)** - AI 助手的模型上下文协议集成
 - **[Compose 编排指南](doc/Compose_CN.md)** - 多服务编排部署最佳实践
+- **[插件开发指南](https://github.com/wgpsec/redc-template/blob/main/doc/plugin-development.md)** - 编写自定义 RedC 插件
 - **[模板仓库](https://github.com/wgpsec/redc-template)** - 预配置的基础设施模板
 - **[在线模板](https://redc.wgpsec.org/)** - 浏览和下载模板
 
