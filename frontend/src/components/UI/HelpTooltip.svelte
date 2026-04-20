@@ -4,6 +4,7 @@
     position = 'right',
     maxWidth = 240,
     inline = false,
+    light = false,
     children,
   } = $props();
 
@@ -89,11 +90,11 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <span
     bind:this={triggerEl}
-    class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 cursor-help flex-shrink-0"
+    class="inline-flex items-center justify-center w-4 h-4 rounded-full cursor-help flex-shrink-0 {light ? 'bg-white/25' : 'bg-gray-200'}"
     onmouseenter={handleEnter}
     onmouseleave={handleLeave}
   >
-    <span class="text-[10px] font-semibold text-gray-500 leading-none">?</span>
+    <span class="text-[10px] font-semibold leading-none {light ? 'text-white/80' : 'text-gray-500'}">?</span>
   </span>
 {/if}
 

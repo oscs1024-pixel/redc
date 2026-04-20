@@ -1282,16 +1282,16 @@ let { t, onTabChange = () => {} } = $props();
         {t.create}
       </button>
       <button
-        class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
         onclick={handleCreateAndRun}
         disabled={createBusy}
       >
         {t.createAndRun}
+        <HelpTooltip text={t.helpCreateAndRun} light />
       </button>
-      <HelpTooltip text={t.helpCreateAndRun} />
       {#if selectedTemplate}
-        <button 
-          class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        <button
+          class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
           onclick={loadCostEstimate}
           disabled={costEstimateLoading}
         >
@@ -1302,9 +1302,9 @@ let { t, onTabChange = () => {} } = $props();
             </span>
           {:else}
             {t.costEstimate}
+            <HelpTooltip text={t.helpCostEstimate} light />
           {/if}
         </button>
-        <HelpTooltip text={t.helpCostEstimate} />
       {/if}
       <button 
         class="h-10 px-5 text-red-500 border border-red-500 bg-white hover:bg-red-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"

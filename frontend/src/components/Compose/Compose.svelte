@@ -478,7 +478,6 @@
               </svg>
               {t.composeTopology || '拓扑视图'}
             </button>
-            <HelpTooltip text={t.helpComposeTopo} />
           </div>
           <div class="border border-gray-100 rounded-lg overflow-hidden">
             <table class="w-full text-[12px]">

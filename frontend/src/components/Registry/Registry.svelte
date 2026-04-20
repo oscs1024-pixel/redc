@@ -7,7 +7,6 @@
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
   import { toast } from '../../lib/toast.js';
   import PageGuide from '../UI/PageGuide.svelte';
-  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   // Registry state
 let { t, lang } = $props();
@@ -572,7 +571,6 @@ let { t, lang } = $props();
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'installed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'installed'; selectedTemplates = new Set(); }}
       >{t.installed} ({installedCount})</button>
-      <HelpTooltip text={t.helpTemplateInstalled} />
       <button 
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'notInstalled' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'notInstalled'; selectedTemplates = new Set(); }}

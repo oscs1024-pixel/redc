@@ -14,7 +14,14 @@
         "新增：新用户引导系统 — Dashboard 新增「快速上手」Checklist（配置凭据→下载模板→创建场景），后端实时检测各步骤完成状态，全部完成自动折叠为成功提示，可永久关闭",
         "新增：页面引导条（PageGuide） — 9 个核心页面顶部新增一句话功能说明，含内联跳转链接，点击 ✕ 永久关闭（localStorage 持久化）",
         "新增：通用 HelpTooltip 组件 — 19 处关键术语和字段旁增加 (?) 帮助图标，hover 显示上下文说明，支持图标模式和内联模式，自动边缘避让",
-        "新增：后端 GetOnboardingStatus/SetOnboardingDismissed API — 检测凭据（9 家云厂商）、模板、场景的配置状态，关闭状态写入 gui_settings.json"
+        "新增：后端 GetOnboardingStatus/SetOnboardingDismissed API — 检测凭据（9 家云厂商）、模板、场景的配置状态，关闭状态写入 gui_settings.json",
+        "新增：SSH 批量执行命令 — SSH 终端页面工具栏新增广播按钮，点击后底部弹出命令输入栏，输入命令回车即可同时发送到所有已连接会话，适用于批量运维操作",
+        "优化：HelpTooltip 支持 light 模式 — 在深色/彩色按钮内使用时 (?) 图标自动切换为白色系样式，与按钮背景协调",
+        "优化：预定义场景「创建并运行」和「成本估算」按钮的 HelpTooltip 移入按钮内部，不再夹在按钮之间造成布局突兀",
+        "优化：自定义部署 HelpTooltip 从独立一行移入 TemplateSelector 标题旁，与「选择模板」文字紧邻",
+        "优化：SSH 新建会话弹窗宽度加大（max-w-md→max-w-2xl），内容更宽敞",
+        "移除：编排管理拓扑视图旁多余的 HelpTooltip，避免挤压拓扑按钮位置",
+        "移除：模板仓库「已安装」标签旁多余的 HelpTooltip"
       ]
     },
     {
