@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, CheckForUpdates, GetLanguage, SetLanguage, GetShowWelcomeDialog, GetSpotMonitorEnabled, GetSpotAutoRecoverEnabled } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, CheckForUpdates, GetLanguage, SetLanguage, GetShowWelcomeDialog, GetSpotMonitorEnabled, GetSpotAutoRecoverEnabled, GetUpdateStatus, DownloadUpdate, ApplyUpdateAndRestart } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -26,6 +26,7 @@
   import SoftwareStore from './components/SoftwareStore/SoftwareStore.svelte';
   import WelcomeDialog from './components/Welcome/WelcomeDialog.svelte';
   import Toast from './components/Toast/Toast.svelte';
+  import UpdateDialog from './components/UI/UpdateDialog.svelte';
 
   let cases = $state([]);
   let templates = $state([]);
@@ -39,6 +40,10 @@
   let spotMonitorEnabled = $state(false);
   let spotAutoRecoverEnabled = $state(false);
   let appVersion = $state('');
+
+  // Auto-update state
+  let updateState = $state({});
+  let showUpdateDialog = $state(false);
   
   // 控制欢迎弹框是否可见（用于避免闪烁）
   let welcomeDialogReady = $state(false);
@@ -171,6 +176,9 @@
     EventsOn('refresh', async () => {
       await refreshData();
     });
+    EventsOn('updateAvailable', (state) => { updateState = state; });
+    EventsOn('updateProgress', (state) => { updateState = state; });
+    EventsOn('updateReady', (state) => { updateState = state; });
     
     // Listen for tab switch events from child components
     window.addEventListener('switchTab', handleSwitchTab);
@@ -187,6 +195,9 @@
   onDestroy(() => {
     EventsOff('log');
     EventsOff('refresh');
+    EventsOff('updateAvailable');
+    EventsOff('updateProgress');
+    EventsOff('updateReady');
     
     // Remove tab switch event listener
     window.removeEventListener('switchTab', handleSwitchTab);
@@ -208,6 +219,8 @@
         GetSpotAutoRecoverEnabled()
       ]);
       debugEnabled = !!config.debugEnabled;
+      // Fetch initial update status (non-blocking)
+      GetUpdateStatus().then(s => { if (s && s.status !== 'none') updateState = s; }).catch(() => {});
     } catch (e) {
       error = e.message || String(e);
       cases = [];
@@ -280,21 +293,39 @@
     return { updateStatus, checkForUpdates };
   }
 
+  async function handleDownloadUpdate() {
+    try {
+      await DownloadUpdate();
+    } catch (e) {
+      console.error('Download update failed:', e);
+    }
+  }
+
+  async function handleApplyRestart() {
+    try {
+      await ApplyUpdateAndRestart();
+    } catch (e) {
+      console.error('Apply update failed:', e);
+    }
+  }
+
 
 </script>
 
 <div class="h-screen flex bg-[#fafbfc] overflow-hidden">
   <!-- Sidebar -->
-  <Sidebar 
-    {t} 
+  <Sidebar
+    {t}
     {lang}
     {activeTab}
     version={appVersion}
+    updateState={updateState}
     onTabChange={(tab) => activeTab = tab}
     onToggleLang={toggleLang}
     onLoadMCPStatus={loadMCPStatus}
     onLoadResourceSummary={loadResourceSummary}
     onCheckUpdate={checkForUpdates}
+    onShowUpdate={() => showUpdateDialog = true}
   />
 
   <!-- Main -->
@@ -446,6 +477,11 @@
 
     <!-- Welcome Dialog -->
     <WelcomeDialog {t} show={welcomeDialogReady} onClose={() => welcomeDialogReady = false} />
+
+    <!-- Update Dialog -->
+    <UpdateDialog {t} show={showUpdateDialog} state={updateState}
+      onDownload={handleDownloadUpdate} onRestart={handleApplyRestart}
+      onClose={() => showUpdateDialog = false} />
 
     <!-- Global Toast -->
     <Toast />
