@@ -749,38 +749,38 @@
   function getQuickPrompts(m) {
     const promptsZh = {
       free: [
-        { label: '红队基础设施规划', text: '帮我规划一个完整的红队基础设施方案，包括 C2、重定向器和钓鱼平台' },
-        { label: '云服务商对比', text: '对比各个云服务商在红队基础设施方面的优缺点' },
-        { label: '安全加固建议', text: '如何对部署的红队基础设施进行安全加固？' },
+        { label: t.qpRedTeamPlanning || '红队基础设施规划', text: '帮我规划一个完整的红队基础设施方案，包括 C2、重定向器和钓鱼平台' },
+        { label: t.qpCloudComparison || '云服务商对比', text: '对比各个云服务商在红队基础设施方面的优缺点' },
+        { label: t.qpSecurityHardening || '安全加固建议', text: '如何对部署的红队基础设施进行安全加固？' },
       ],
       agent: [
-        { label: '部署 nginx 服务器', text: '帮我部署一个 nginx 服务器' },
-        { label: '查看当前场景', text: '列出所有当前运行中的场景和状态' },
-        { label: '生成 AWS EC2 模板', text: '帮我生成一个 AWS EC2 实例的 Terraform 模板' },
-        { label: '分析当前成本', text: '分析我当前所有运行中场景的成本，并给出优化建议' },
-        { label: '推荐 C2 场景', text: '推荐适合长期渗透的 C2 基础设施部署方案' },
+        { label: t.qpDeployNginx || '部署 nginx 服务器', text: '帮我部署一个 nginx 服务器' },
+        { label: t.qpListScenes || '查看当前场景', text: '列出所有当前运行中的场景和状态' },
+        { label: t.qpGenAwsTemplate || '生成 AWS EC2 模板', text: '帮我生成一个 AWS EC2 实例的 Terraform 模板' },
+        { label: t.qpAnalyzeCost || '分析当前成本', text: '分析我当前所有运行中场景的成本，并给出优化建议' },
+        { label: t.qpRecommendC2 || '推荐 C2 场景', text: '推荐适合长期渗透的 C2 基础设施部署方案' },
       ],
       orchestrator: [
-        { label: '搭建高可用集群', text: '在 AWS 上搭建一个高可用 Web 服务集群' },
-        { label: '安全审计', text: '对所有运行中的场景进行安全审计并生成报告' },
+        { label: t.qpHACluster || '搭建高可用集群', text: '在 AWS 上搭建一个高可用 Web 服务集群' },
+        { label: t.qpSecurityAudit || '安全审计', text: '对所有运行中的场景进行安全审计并生成报告' },
       ],
     };
     const promptsEn = {
       free: [
-        { label: 'Red Team Infra Planning', text: 'Help me plan a complete red team infrastructure including C2, redirectors and phishing platform' },
-        { label: 'Cloud Provider Comparison', text: 'Compare cloud providers for red team infrastructure in terms of pros and cons' },
-        { label: 'Security Hardening', text: 'How to harden deployed red team infrastructure for better security?' },
+        { label: t.qpRedTeamPlanning || 'Red Team Infra Planning', text: 'Help me plan a complete red team infrastructure including C2, redirectors and phishing platform' },
+        { label: t.qpCloudComparison || 'Cloud Provider Comparison', text: 'Compare cloud providers for red team infrastructure in terms of pros and cons' },
+        { label: t.qpSecurityHardening || 'Security Hardening', text: 'How to harden deployed red team infrastructure for better security?' },
       ],
       agent: [
-        { label: 'Deploy nginx server', text: 'Help me deploy an nginx server' },
-        { label: 'List running scenes', text: 'List all currently running scenes and their status' },
-        { label: 'Generate AWS EC2 template', text: 'Help me generate a Terraform template for an AWS EC2 instance' },
-        { label: 'Analyze current costs', text: 'Analyze the costs of all my running scenes and suggest optimizations' },
-        { label: 'Recommend C2 scenario', text: 'Recommend a C2 infrastructure deployment plan suitable for long-term operations' },
+        { label: t.qpDeployNginx || 'Deploy nginx server', text: 'Help me deploy an nginx server' },
+        { label: t.qpListScenes || 'List running scenes', text: 'List all currently running scenes and their status' },
+        { label: t.qpGenAwsTemplate || 'Generate AWS EC2 template', text: 'Help me generate a Terraform template for an AWS EC2 instance' },
+        { label: t.qpAnalyzeCost || 'Analyze current costs', text: 'Analyze the costs of all my running scenes and suggest optimizations' },
+        { label: t.qpRecommendC2 || 'Recommend C2 scenario', text: 'Recommend a C2 infrastructure deployment plan suitable for long-term operations' },
       ],
       orchestrator: [
-        { label: 'Set up HA cluster', text: 'Set up a highly available web cluster on AWS' },
-        { label: 'Security audit', text: 'Audit all running scenarios for security and generate a report' },
+        { label: t.qpHACluster || 'Set up HA cluster', text: 'Set up a highly available web cluster on AWS' },
+        { label: t.qpSecurityAudit || 'Security audit', text: 'Audit all running scenarios for security and generate a report' },
       ],
     };
     const prompts = lang === 'en' ? promptsEn : promptsZh;

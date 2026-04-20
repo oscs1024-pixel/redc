@@ -38,11 +38,11 @@
   };
 
   const toolCategories = [
-    { key: 'templateTools', label: '模板管理', labelEn: 'Template', tools: ['list_templates', 'search_templates', 'pull_template', 'get_template_info', 'get_template_files', 'delete_template', 'save_template_files'] },
-    { key: 'deployTools', label: '场景部署', labelEn: 'Deploy', tools: ['plan_case', 'start_case', 'stop_case', 'kill_case', 'list_cases', 'get_case_status', 'get_case_outputs'] },
-    { key: 'remoteTools', label: '远程操作', labelEn: 'Remote', tools: ['exec_command', 'get_ssh_info', 'upload_file', 'download_file'] },
-    { key: 'userdataTools', label: 'Userdata', labelEn: 'Userdata', tools: ['list_userdata_templates', 'exec_userdata'] },
-    { key: 'systemTools', label: '系统/其他', labelEn: 'System', tools: ['get_config', 'validate_config', 'ask_user'] },
+    { key: 'templateTools', tools: ['list_templates', 'search_templates', 'pull_template', 'get_template_info', 'get_template_files', 'delete_template', 'save_template_files'] },
+    { key: 'deployTools', tools: ['plan_case', 'start_case', 'stop_case', 'kill_case', 'list_cases', 'get_case_status', 'get_case_outputs'] },
+    { key: 'remoteTools', tools: ['exec_command', 'get_ssh_info', 'upload_file', 'download_file'] },
+    { key: 'userdataTools', tools: ['list_userdata_templates', 'exec_userdata'] },
+    { key: 'systemTools', tools: ['get_config', 'validate_config', 'ask_user'] },
   ];
 
   onMount(() => {
@@ -122,10 +122,7 @@
   function getProviderDisplayName(provider) {
     const preset = providerPresets[provider];
     if (!preset) return provider;
-    if (t && (t.openaiCompatible || '').includes('OpenAI')) {
-      return preset.nameEn || preset.name;
-    }
-    return preset.name;
+    return t[provider + 'Compatible'] || preset.name;
   }
 
   // Skills Knowledge Base state
@@ -478,7 +475,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each toolCategories as cat}
         <div class="bg-gray-50 rounded-lg p-3">
-          <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-2">{t[cat.key] || cat.label}</div>
+          <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-2">{t[cat.key] || cat.key}</div>
           <div class="space-y-1.5">
             {#each cat.tools as tool}
               <div class="flex items-center gap-2 text-[12px] text-gray-700">

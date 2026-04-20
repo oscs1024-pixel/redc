@@ -536,6 +536,11 @@ export const i18n = {
     sceneLabel: '场景',
     // Settings placeholder
     proxyExample: '例',
+    // AI quick prompt labels
+    qpRedTeamPlanning: '红队基础设施规划', qpCloudComparison: '云服务商对比', qpSecurityHardening: '安全加固建议',
+    qpDeployNginx: '部署 nginx 服务器', qpListScenes: '查看当前场景', qpGenAwsTemplate: '生成 AWS EC2 模板',
+    qpAnalyzeCost: '分析当前成本', qpRecommendC2: '推荐 C2 场景',
+    qpHACluster: '搭建高可用集群', qpSecurityAudit: '安全审计',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', userdataScripts: 'Userdata Scripts', softwareStore: 'Software Store',
@@ -1084,6 +1089,11 @@ export const i18n = {
     sceneLabel: 'Scene',
     // Settings placeholder
     proxyExample: 'e.g.',
+    // AI quick prompt labels
+    qpRedTeamPlanning: 'Red Team Infra Planning', qpCloudComparison: 'Cloud Provider Comparison', qpSecurityHardening: 'Security Hardening',
+    qpDeployNginx: 'Deploy nginx server', qpListScenes: 'List running scenes', qpGenAwsTemplate: 'Generate AWS EC2 template',
+    qpAnalyzeCost: 'Analyze current costs', qpRecommendC2: 'Recommend C2 scenario',
+    qpHACluster: 'Set up HA cluster', qpSecurityAudit: 'Security audit',
   }
 };
 

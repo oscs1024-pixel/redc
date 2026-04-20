@@ -32,14 +32,14 @@
   function openLink(url) { BrowserOpenURL(url); }
 
   function getChangeType(text) {
-    if (text.startsWith('新增：') || text.startsWith('新增:')) return { type: 'new', label: t.changelogNew || '新增', color: 'bg-emerald-50 text-emerald-700' };
-    if (text.startsWith('修复：') || text.startsWith('修复:')) return { type: 'fix', label: t.changelogFix || '修复', color: 'bg-red-50 text-red-700' };
-    if (text.startsWith('优化：') || text.startsWith('优化:')) return { type: 'improve', label: t.changelogImprove || '优化', color: 'bg-blue-50 text-blue-700' };
+    if (text.startsWith('新增：') || text.startsWith('新增:') || text.startsWith('New:') || text.startsWith('New：')) return { type: 'new', label: t.changelogNew || '新增', color: 'bg-emerald-50 text-emerald-700' };
+    if (text.startsWith('修复：') || text.startsWith('修复:') || text.startsWith('Fix:') || text.startsWith('Fix：')) return { type: 'fix', label: t.changelogFix || '修复', color: 'bg-red-50 text-red-700' };
+    if (text.startsWith('优化：') || text.startsWith('优化:') || text.startsWith('Improve:') || text.startsWith('Improve：')) return { type: 'improve', label: t.changelogImprove || '优化', color: 'bg-blue-50 text-blue-700' };
     return { type: 'other', label: t.changelogOther || '变更', color: 'bg-gray-100 text-gray-600' };
   }
 
   function getChangeContent(text) {
-    return text.replace(/^(新增|修复|优化)[：:]/, '');
+    return text.replace(/^(新增|修复|优化|New|Fix|Improve)[：:]/, '');
   }
 
   const features = [

@@ -10,19 +10,23 @@
   // 翻译凭据错误信息
   function translateError(error) {
     if (!error) return '';
-    // 中文厂商名映射到英文键名
+    // 中文/英文厂商名映射到英文键名
     const providerMap = {
-      '阿里云': 'Aliyun',
-      '腾讯云': 'Tencent',
-      '火山引擎': 'Volcengine',
-      '华为云': 'Huawei',
+      '阿里云': 'Aliyun', 'Aliyun': 'Aliyun', 'Alibaba': 'Aliyun',
+      '腾讯云': 'Tencent', 'Tencent': 'Tencent',
+      '火山引擎': 'Volcengine', 'Volcengine': 'Volcengine',
+      '华为云': 'Huawei', 'Huawei': 'Huawei',
       'UCloud': 'UCloud',
       'Vultr': 'Vultr',
       'AWS': 'AWS',
       'GCP': 'GCP',
       'Azure': 'Azure'
     };
-    let provider = error.replace('未配置', '').replace('凭据', '').trim();
+    // Strip both Chinese and English common prefixes
+    let provider = error.replace('未配置', '').replace('凭据', '')
+      .replace('not configured', '').replace('credentials', '')
+      .replace('Not configured', '').replace('Credentials', '')
+      .trim();
     const key = 'noCredentials' + (providerMap[provider] || provider);
     return t[key] || error;
   }
