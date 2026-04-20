@@ -151,7 +151,7 @@ export const i18n = {
     allTemplates: '全部', presetTemplates: '预定义模板', customTemplates: '自定义模板', userdataTemplates: 'Userdata模板', composeTemplates: 'Compose模板',
     disableRightClick: '禁用右键菜单', disableRightClickDesc: '禁用后无法使用右键唤出菜单，请根据需要开启',
     confirmDeleteTemplate: '确定要删除模板', deleteWarning: '删除后需要重新从仓库拉取才能使用',
-    exportTemplates: '导出模板', importTemplates: '导入模板', exportSuccess: '模板导出成功', importSuccess: '模板导入成功', importFailed: '导入失败',
+    exportTemplates: '导出模板', importTemplates: '导入模板', templateDevGuide: '模板编写文档', exportSuccess: '模板导出成功', importSuccess: '模板导入成功', importFailed: '导入失败',
     deleting: '删除中...', refresh: '刷新', close: '关闭',
     closeError: '关闭错误', closeTip: '关闭提示', closeDetail: '关闭详情',
     zoomIn: '放大', zoomOut: '缩小', zoomReset: '重置',
@@ -280,6 +280,7 @@ export const i18n = {
     pluginMarketSource: '插件来源: redc.wgpsec.org',
     pluginAlreadyInstalled: '已安装', pluginInstallManual: '手动安装',
     pluginInstallSuccess: '插件安装成功', pluginUpdateSuccess: '插件已更新: ',
+    pluginSearch: '搜索插件...', pluginDevGuide: '插件开发文档',
     // AI Features
     smartRecommend: '智能场景推荐', smartRecommendDesc: '描述您的需求，AI 将为您推荐最合适的场景模板',
     recommendPlaceholder: '例如：我需要一个阿里云的测试环境...', recommend: '推荐', match: '匹配',
@@ -628,7 +629,7 @@ export const i18n = {
     allTemplates: 'All', presetTemplates: 'Preset', customTemplates: 'Custom', userdataTemplates: 'Userdata', composeTemplates: 'Compose',
     disableRightClick: 'Disable Right Click', disableRightClickDesc: 'When disabled, right-click menu will not be available',
     confirmDeleteTemplate: 'Are you sure you want to delete template', deleteWarning: 'You need to pull from registry again to use it',
-    exportTemplates: 'Export', importTemplates: 'Import', exportSuccess: 'Templates exported successfully', importSuccess: 'Templates imported successfully', importFailed: 'Import failed',
+    exportTemplates: 'Export', importTemplates: 'Import', templateDevGuide: 'Template Guide', exportSuccess: 'Templates exported successfully', importSuccess: 'Templates imported successfully', importFailed: 'Import failed',
     deleting: 'Deleting...', refresh: 'Refresh', close: 'Close',
     closeError: 'Close error', closeTip: 'Close tip', closeDetail: 'Close details',
     zoomIn: 'Zoom in', zoomOut: 'Zoom out', zoomReset: 'Reset',
@@ -757,6 +758,7 @@ export const i18n = {
     pluginMarketSource: 'Source: redc.wgpsec.org',
     pluginAlreadyInstalled: 'Installed', pluginInstallManual: 'Manual Install',
     pluginInstallSuccess: 'Plugin installed', pluginUpdateSuccess: 'Plugin updated: ',
+    pluginSearch: 'Search plugins...', pluginDevGuide: 'Plugin Dev Guide',
     // AI Features
     smartRecommend: 'Smart Template Recommendation', smartRecommendDesc: 'Describe your needs and AI will recommend the best templates',
     recommendPlaceholder: 'e.g., I need an Alibaba Cloud test environment...', recommend: 'Recommend', match: 'match',
