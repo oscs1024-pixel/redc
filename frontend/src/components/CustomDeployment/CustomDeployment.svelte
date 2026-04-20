@@ -10,7 +10,7 @@
   import ImportExportDialog from './ImportExportDialog.svelte';
   import DeploymentManagement from './DeploymentManagement.svelte';
 
-  let { t, onTabChange = () => {} } = $props();
+  let { t, lang = 'zh', onTabChange = () => {} } = $props();
   
   // Tab state
   let activeTab = $state('create'); // 'create' or 'manage'
@@ -370,8 +370,9 @@
     </div>
   {:else}
     <!-- Template Selector -->
-    <TemplateSelector 
+    <TemplateSelector
       {t}
+      {lang}
       templates={baseTemplates}
       selectedTemplate={selectedTemplate}
       onSelect={handleTemplateSelect}
@@ -422,8 +423,9 @@
 
     <!-- Config Editor -->
     {#if selectedTemplate && templateMetadata}
-      <ConfigEditor 
+      <ConfigEditor
         {t}
+        {lang}
         template={templateMetadata}
         {config}
         {validation}

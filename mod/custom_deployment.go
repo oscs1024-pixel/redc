@@ -137,15 +137,16 @@ func NewCustomDeploymentService() *CustomDeploymentService {
 
 // BaseTemplate 基础模板结构
 type BaseTemplate struct {
-	Name         string             `json:"name"`
-	Description  string             `json:"description"`
-	Version      string             `json:"version"`
-	Variables    []TemplateVariable `json:"variables"`
-	Provider     string             `json:"provider"`  // 单一云厂商标识（新模板使用）
-	Providers    []string           `json:"providers"` // 支持的云厂商列表（向后兼容）
-	TemplateType TemplateType       `json:"template"`
-	User         string             `json:"user"`
-	RedcModule   string             `json:"redc_module,omitempty"`
+	Name          string             `json:"name"`
+	Description   string             `json:"description"`
+	DescriptionEN string             `json:"description_en"`
+	Version       string             `json:"version"`
+	Variables     []TemplateVariable `json:"variables"`
+	Provider      string             `json:"provider"`  // 单一云厂商标识（新模板使用）
+	Providers     []string           `json:"providers"` // 支持的云厂商列表（向后兼容）
+	TemplateType  TemplateType       `json:"template"`
+	User          string             `json:"user"`
+	RedcModule    string             `json:"redc_module,omitempty"`
 }
 
 // TemplateVariable 模板变量定义

@@ -6,9 +6,10 @@
   import InstanceTypeSelector from './InstanceTypeSelector.svelte';
   import UserdataEditor from './UserdataEditor.svelte';
   
-  let { 
-    t, 
-    template, 
+  let {
+    t,
+    lang = 'zh',
+    template,
     config = {}, 
     validation = { valid: true, errors: [], warnings: [] },
     onConfigUpdate = () => {},
@@ -382,7 +383,7 @@
                     {variable.name}
                     <span class="text-red-500">*</span>
                     {#if variable.description}
-                      <span class="text-gray-400 ml-1">({variable.description})</span>
+                      <span class="text-gray-400 ml-1">({lang === 'en' ? (variable.description_en || variable.description) : variable.description})</span>
                     {/if}
                     {#if variable.type && variable.type !== 'string'}
                       <span class="text-gray-300 ml-1 text-[10px]">{variable.type}</span>
@@ -436,7 +437,7 @@
                   <label for="optional-var-{index}" class="block text-[11px] text-gray-700 mb-1">
                     {variable.name}
                     {#if variable.description}
-                      <span class="text-gray-400 ml-1">({variable.description})</span>
+                      <span class="text-gray-400 ml-1">({lang === 'en' ? (variable.description_en || variable.description) : variable.description})</span>
                     {/if}
                     {#if variable.type && variable.type !== 'string'}
                       <span class="text-gray-300 ml-1 text-[10px]">{variable.type}</span>

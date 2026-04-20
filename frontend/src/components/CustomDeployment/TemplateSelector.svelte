@@ -1,5 +1,5 @@
 <script>
-  let { t, templates = [], selectedTemplate = null, onSelect = () => {} } = $props();
+  let { t, lang = 'zh', templates = [], selectedTemplate = null, onSelect = () => {} } = $props();
   
   let searchQuery = $state('');
 
@@ -10,9 +10,10 @@
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(tmpl => 
+      result = result.filter(tmpl =>
         tmpl.name.toLowerCase().includes(query) ||
-        (tmpl.description && tmpl.description.toLowerCase().includes(query))
+        (tmpl.description && tmpl.description.toLowerCase().includes(query)) ||
+        (tmpl.description_en && tmpl.description_en.toLowerCase().includes(query))
       );
     }
 
@@ -125,7 +126,7 @@
                 {/if}
               </div>
               {#if template.description}
-                <p class="text-[12px] text-gray-600 mt-1">{template.description}</p>
+                <p class="text-[12px] text-gray-600 mt-1">{lang === 'en' ? (template.description_en || template.description) : template.description}</p>
               {/if}
               {#if template.providers && template.providers.length > 0}
                 <div class="flex items-center gap-2 mt-2">

@@ -1249,6 +1249,7 @@ export namespace mod {
 	export class BaseTemplate {
 	    name: string;
 	    description: string;
+	    description_en: string;
 	    version: string;
 	    variables: TemplateVariable[];
 	    provider: string;
@@ -1265,6 +1266,7 @@ export namespace mod {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.description = source["description"];
+	        this.description_en = source["description_en"];
 	        this.version = source["version"];
 	        this.variables = this.convertValues(source["variables"], TemplateVariable);
 	        this.provider = source["provider"];

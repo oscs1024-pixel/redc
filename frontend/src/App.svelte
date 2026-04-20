@@ -427,7 +427,7 @@
               <LocalTemplates {t} {lang} />
 
             {:else if activeTab === 'customDeployment'}
-              <CustomDeployment {t} onTabChange={(tab) => activeTab = tab} />
+              <CustomDeployment {t} {lang} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'taskCenter'}
               <TaskCenter {t} />

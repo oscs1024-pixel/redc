@@ -27,6 +27,7 @@ func NewTemplateManager() *TemplateManager {
 type caseJSON struct {
 	Name           string       `json:"name"`
 	Description    string       `json:"description"`
+	DescriptionEN  string       `json:"description_en"`
 	User           string       `json:"user"`
 	Version        string       `json:"version"`
 	RedcModule    string       `json:"redc_module"`
@@ -154,15 +155,16 @@ func (m *TemplateManager) readBaseTemplateMetadata(templatePath string) (*BaseTe
 
 	// 构建 BaseTemplate 对象
 	template := &BaseTemplate{
-		Name:        templateName,
-		Description: caseData.Description,
-		Version:     caseData.Version,
-		User:        caseData.User,
-		RedcModule:  caseData.RedcModule,
+		Name:         templateName,
+		Description:  caseData.Description,
+		DescriptionEN: caseData.DescriptionEN,
+		Version:      caseData.Version,
+		User:         caseData.User,
+		RedcModule:   caseData.RedcModule,
 		TemplateType: caseData.TemplateType,
-		Provider:    caseData.Provider, // 单一云厂商
-		Providers:   caseData.SupportedProviders, // 支持的云厂商列表（向后兼容）
-		Variables:   variables,
+		Provider:     caseData.Provider, // 单一云厂商
+		Providers:    caseData.SupportedProviders, // 支持的云厂商列表（向后兼容）
+		Variables:    variables,
 	}
 
 	return template, nil
