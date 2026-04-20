@@ -480,6 +480,7 @@ func (a *App) ListCases() ([]CaseInfo, error) {
 			Operator:       c.Operator,
 			IsSpotInstance: detectSpotFromTfFiles(c.Path),
 			Tags:           tagMap[c.Id],
+			Plugins:        c.Plugins,
 		})
 	}
 	return result, nil

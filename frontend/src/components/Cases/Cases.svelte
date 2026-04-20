@@ -1,7 +1,7 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, GetCasePlanPreview, SetCaseTags, GetAllTagNames, CloneCase } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, GetCasePlanPreview, SetCaseTags, GetAllTagNames, CloneCase, ListPlugins } from '../../../wailsjs/go/main/App.js';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
   import SSHModal from './SSHModal.svelte';
@@ -20,6 +20,16 @@ let { t, onTabChange = () => {} } = $props();
   let caseOutputs = $state({});
   let deleteConfirm = $state({ show: false, caseId: null, caseName: '' });
   let stopConfirm = $state({ show: false, caseId: null, caseName: '' });
+  let pluginCheckModal = $state({
+    show: false,
+    mode: 'single',
+    caseName: '',
+    caseId: '',
+    caseIds: [],
+    missingPlugins: [],
+    missingByCase: [],
+    okCount: 0
+  });
   let templateVariables = $state([]);
   let variableValues = $state({});
   let error = $state('');
@@ -521,7 +531,36 @@ let { t, onTabChange = () => {} } = $props();
     }
   }
   
+  async function checkMissingPlugins(pluginsStr) {
+    if (!pluginsStr || !pluginsStr.trim()) return [];
+    try {
+      const installed = await ListPlugins();
+      const installedNames = new Set(installed.map(p => p.manifest?.name || p.name));
+      const required = pluginsStr.split(',').map(s => s.trim()).filter(Boolean);
+      return required.filter(name => !installedNames.has(name));
+    } catch {
+      return [];
+    }
+  }
+
   async function handleStart(caseId) {
+    const c = cases.find(c => c.id === caseId);
+    if (c && c.plugins) {
+      const missing = await checkMissingPlugins(c.plugins);
+      if (missing.length > 0) {
+        pluginCheckModal = {
+          show: true, mode: 'single',
+          caseName: c.name, caseId,
+          caseIds: [], missingPlugins: missing,
+          missingByCase: [], okCount: 0
+        };
+        return;
+      }
+    }
+    doStart(caseId);
+  }
+
+  async function doStart(caseId) {
     cases = cases.map(c => c.id === caseId ? { ...c, state: 'starting' } : c);
     try {
       await StartCase(caseId);
@@ -529,6 +568,25 @@ let { t, onTabChange = () => {} } = $props();
       error = e.message || String(e);
       await refresh();
     }
+  }
+
+  function confirmPluginStart() {
+    const { mode, caseId, caseIds } = pluginCheckModal;
+    pluginCheckModal = { show: false, mode: 'single', caseName: '', caseId: '', caseIds: [], missingPlugins: [], missingByCase: [], okCount: 0 };
+    if (mode === 'single') {
+      doStart(caseId);
+    } else {
+      caseIds.forEach(id => doStart(id));
+    }
+  }
+
+  function cancelPluginCheck() {
+    pluginCheckModal = { show: false, mode: 'single', caseName: '', caseId: '', caseIds: [], missingPlugins: [], missingByCase: [], okCount: 0 };
+  }
+
+  function goToPluginManager() {
+    pluginCheckModal = { show: false, mode: 'single', caseName: '', caseId: '', caseIds: [], missingPlugins: [], missingByCase: [], okCount: 0 };
+    onTabChange('pluginManager');
   }
 
   function showCloneDialog(caseId, caseName) {
@@ -1039,12 +1097,44 @@ let { t, onTabChange = () => {} } = $props();
 
   async function handleBatchStart() {
     batchOperating = true;
-    
+
     const caseIds = Array.from(selectedCases);
-    
+    const selectedCaseList = caseIds.map(id => cases.find(c => c.id === id)).filter(Boolean);
+
+    // Check plugin dependencies for all selected cases
+    const casesWithPlugins = selectedCaseList.filter(c => c.plugins && c.plugins.trim());
+    let missingByCase = [];
+    if (casesWithPlugins.length > 0) {
+      try {
+        const installed = await ListPlugins();
+        const installedNames = new Set(installed.map(p => p.manifest?.name || p.name));
+        for (const c of casesWithPlugins) {
+          const required = c.plugins.split(',').map(s => s.trim()).filter(Boolean);
+          const missing = required.filter(name => !installedNames.has(name));
+          if (missing.length > 0) {
+            missingByCase.push({ name: c.name, caseId: c.id, missing });
+          }
+        }
+      } catch {
+        // Ignore plugin check errors, proceed with start
+      }
+    }
+
+    if (missingByCase.length > 0) {
+      pluginCheckModal = {
+        show: true, mode: 'batch',
+        caseName: '', caseId: '',
+        caseIds,
+        missingPlugins: [],
+        missingByCase,
+        okCount: caseIds.length - missingByCase.length
+      };
+      batchOperating = false;
+      return;
+    }
+
     try {
-      // Execute starts in parallel
-      await Promise.all(caseIds.map(caseId => StartCase(caseId)));
+      await Promise.all(caseIds.map(caseId => doStart(caseId)));
       selectedCases = new Set();
     } catch (e) {
       error = e.message || String(e);
@@ -1947,6 +2037,70 @@ let { t, onTabChange = () => {} } = $props();
         class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
         onclick={confirmStop}
       >{t.stop}</button>
+    </div>
+  </div>
+</Modal>
+
+<!-- Plugin Dependency Check Modal -->
+<Modal show={pluginCheckModal.show} onclose={cancelPluginCheck}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-md w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">
+            {pluginCheckModal.mode === 'single' ? (t.pluginNotInstalled || '插件未安装') : (t.pluginsMissing || '部分场景缺少插件')}
+          </h3>
+        </div>
+      </div>
+
+      {#if pluginCheckModal.mode === 'single'}
+        <p class="text-[13px] text-gray-600 mb-3">
+          {t.sceneDepends || '场景'} <span class="font-medium text-gray-900">"{pluginCheckModal.caseName}"</span> {t.dependsPluginsNotInstalled || '依赖以下插件，但尚未安装：'}
+        </p>
+        <ul class="mb-3 space-y-1">
+          {#each pluginCheckModal.missingPlugins as plugin}
+            <li class="flex items-center gap-2 text-[12px] text-gray-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>
+              {plugin}
+            </li>
+          {/each}
+        </ul>
+        <p class="text-[12px] text-gray-500">{t.startWithoutPlugins || '启动后部分功能（如生成配置文件）可能不可用。'}</p>
+      {:else}
+        <p class="text-[13px] text-gray-600 mb-3">{t.followingScenesPluginsMissing || '以下场景依赖的插件尚未安装：'}</p>
+        <div class="mb-3 space-y-2 max-h-48 overflow-y-auto">
+          {#each pluginCheckModal.missingByCase as item}
+            <div class="px-3 py-2 bg-gray-50 rounded-lg">
+              <p class="text-[12px] font-medium text-gray-900">{item.name}</p>
+              <p class="text-[11px] text-gray-500 mt-0.5">
+                {t.missing || '缺少'}: {item.missing.join(', ')}
+              </p>
+            </div>
+          {/each}
+        </div>
+        {#if pluginCheckModal.okCount > 0}
+          <p class="text-[12px] text-gray-500">{t.otherScenesOk || '其余'} {pluginCheckModal.okCount} {t.scenesPluginsComplete || '个场景插件完整，不受影响。'}</p>
+        {/if}
+      {/if}
+    </div>
+    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+      <button
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={cancelPluginCheck}
+      >{t.cancel || '取消'}</button>
+      <button
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={goToPluginManager}
+      >{t.goInstall || '去安装'}</button>
+      <button
+        class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+        onclick={confirmPluginStart}
+      >{pluginCheckModal.mode === 'single' ? (t.startAnyway || '仍然启动') : (t.startAll || '全部启动')}</button>
     </div>
   </div>
 </Modal>

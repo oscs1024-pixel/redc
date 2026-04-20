@@ -271,6 +271,7 @@ export namespace main {
 	    operator: string;
 	    isSpotInstance: boolean;
 	    tags: string[];
+	    plugins?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new CaseInfo(source);
@@ -287,6 +288,7 @@ export namespace main {
 	        this.operator = source["operator"];
 	        this.isSpotInstance = source["isSpotInstance"];
 	        this.tags = source["tags"];
+	        this.plugins = source["plugins"];
 	    }
 	}
 	export class ComposeServiceSummary {

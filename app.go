@@ -362,6 +362,7 @@ type CaseInfo struct {
 	Operator       string   `json:"operator"`
 	IsSpotInstance bool     `json:"isSpotInstance"`
 	Tags           []string `json:"tags"`
+	Plugins        string   `json:"plugins,omitempty"`
 }
 
 // ConfigInfo represents the configuration for frontend display
