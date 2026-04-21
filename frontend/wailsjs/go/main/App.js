@@ -266,6 +266,14 @@ export function GetF8xRunningTasks() {
   return window['go']['main']['App']['GetF8xRunningTasks']();
 }
 
+export function GetF8xTools() {
+  return window['go']['main']['App']['GetF8xTools']();
+}
+
+export function GetInstalledTools(arg1) {
+  return window['go']['main']['App']['GetInstalledTools'](arg1);
+}
+
 export function RefreshF8xCatalog() {
   return window['go']['main']['App']['RefreshF8xCatalog']();
 }
@@ -464,6 +472,10 @@ export function ImportConfigTemplate(arg1, arg2) {
 
 export function ImportTemplates(arg1) {
   return window['go']['main']['App']['ImportTemplates'](arg1);
+}
+
+export function InstallF8xTool(arg1, arg2) {
+  return window['go']['main']['App']['InstallF8xTool'](arg1, arg2);
 }
 
 export function InstallPlugin(arg1) {
