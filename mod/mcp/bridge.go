@@ -44,4 +44,9 @@ type AppBridge interface {
 
 	// Compose file write
 	MCPSaveComposeFile(filename string, content string) (string, error)
+
+	// f8x tools
+	MCPInstallF8xTool(caseID, toolName string) (string, error)
+	MCPGetInstalledTools(caseID string) (interface{}, error)
+	MCPGetF8xCatalog(category, search string) (interface{}, error)
 }

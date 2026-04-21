@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
 	redc "red-cloud/mod"
 	"time"
 )
@@ -138,4 +140,51 @@ func (a *App) MCPSaveComposeFile(filename string, content string) (string, error
 		return "", fmt.Errorf("写入 compose 文件失败: %v", err)
 	}
 	return savePath, nil
+}
+
+// MCPInstallF8xTool implements AppBridge
+func (a *App) MCPInstallF8xTool(caseID, toolName string) (string, error) {
+	taskID := a.InstallF8xTool(caseID, toolName)
+	return taskID, nil
+}
+
+// MCPGetInstalledTools implements AppBridge
+func (a *App) MCPGetInstalledTools(caseID string) (interface{}, error) {
+	return a.GetInstalledTools(caseID)
+}
+
+// MCPGetF8xCatalog implements AppBridge
+func (a *App) MCPGetF8xCatalog(category, search string) (interface{}, error) {
+	tools := a.GetF8xTools()
+	if tools == nil {
+		tools = []redc.F8xTool{}
+	}
+
+	// Filter by category
+	if category != "" {
+		var filtered []redc.F8xTool
+		for _, t := range tools {
+			if t.Category == category {
+				filtered = append(filtered, t)
+			}
+		}
+		tools = filtered
+	}
+
+	// Filter by search
+	if search != "" {
+		search = strings.ToLower(search)
+		var filtered []redc.F8xTool
+		for _, t := range tools {
+			if strings.Contains(strings.ToLower(t.Name), search) ||
+				strings.Contains(strings.ToLower(t.NameZh), search) ||
+				strings.Contains(strings.ToLower(t.Description), search) ||
+				strings.Contains(strings.ToLower(t.ID), search) {
+				filtered = append(filtered, t)
+			}
+		}
+		tools = filtered
+	}
+
+	return tools, nil
 }

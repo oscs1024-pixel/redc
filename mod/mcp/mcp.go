@@ -640,6 +640,7 @@ func (s *MCPServer) getTools() []Tool {
 		tools = append(tools, deploymentToolSchemas()...)
 		tools = append(tools, projectToolSchemas()...)
 		tools = append(tools, schedulerToolSchemas()...)
+		tools = append(tools, f8xToolSchemas()...)
 		tools = append(tools, Tool{
 			Name:        "save_template_files",
 			Description: "Save/create a new template by writing template files (case.json, main.tf, variables.tf, outputs.tf, terraform.tfvars). Used to programmatically create templates for deployment. Template name must start with 'ai-' prefix.",
@@ -1169,6 +1170,13 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 			return ToolResult{}, fmt.Errorf("missing or invalid 'id' parameter")
 		}
 		return s.toolReadSkill(id)
+
+	case "install_tool":
+		return s.toolInstallF8xTool(args)
+	case "get_installed_tools":
+		return s.toolGetInstalledTools(args)
+	case "get_f8x_catalog":
+		return s.toolGetF8xCatalog(args)
 
 	default:
 		return ToolResult{}, fmt.Errorf("unknown tool: %s", name)
