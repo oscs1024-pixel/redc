@@ -449,7 +449,7 @@
               <UserdataScripts {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'softwareStore'}
-              <SoftwareStore {t} onTabChange={(tab) => activeTab = tab} />
+              <SoftwareStore {t} {lang} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'credentials'}
               <Credentials {t} />

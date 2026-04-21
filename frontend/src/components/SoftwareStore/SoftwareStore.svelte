@@ -1,10 +1,10 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { GetF8xCatalog, GetF8xCategories, GetF8xPresets, BuildF8xCommand, RefreshF8xCatalog } from '../../../wailsjs/go/main/App.js';
+  import { GetF8xCatalog, GetF8xCategories, GetF8xPresets, BuildF8xCommand, RefreshF8xCatalog, GetF8xTools, GetInstalledTools } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import Modal from '../UI/Modal.svelte';
 
-  let { t, onTabChange } = $props();
+  let { t, lang = 'zh', onTabChange } = $props();
 
   let catalog = $state([]);
   let categories = $state([]);
@@ -16,6 +16,16 @@
   let searchQuery = $state('');
   let selectedModules = $state(new Set());
   let expandedIncludes = $state(new Set());
+
+  // View tabs
+  let activeView = $state('modules');  // 'modules' | 'tools' | 'presets'
+
+  // Single tools state
+  let tools = $state([]);
+  let installedTools = $state({});
+  let toolCategory = $state('all');
+  let toolSearch = $state('');
+  let installedLoading = $state(false);
 
   // Install confirm dialog (single tool)
   let installConfirm = $state({ show: false, mod: null });
@@ -34,6 +44,12 @@
       catalog = cat || [];
       categories = cats || [];
       presets = pre || [];
+      // Load individual tools
+      try {
+        tools = await GetF8xTools() || [];
+      } catch(e2) {
+        console.error('Failed to load f8x tools:', e2);
+      }
       if (catalog.length === 0) {
         catalogError = t.f8xCatalogError || '无法加载工具目录，请检查网络连接后点击 ⟳ 刷新';
       }
@@ -61,6 +77,24 @@
       );
     }
     return list;
+  });
+
+  const filteredTools = $derived(() => {
+    let result = tools;
+    if (toolCategory !== 'all') {
+      result = result.filter(t => t.category === toolCategory);
+    }
+    if (toolSearch) {
+      const q = toolSearch.toLowerCase();
+      result = result.filter(t =>
+        t.name.toLowerCase().includes(q) ||
+        t.nameZh.toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q) ||
+        (t.tags || []).some(tag => tag.toLowerCase().includes(q))
+      );
+    }
+    return result;
   });
 
   function toggleModule(id) {
@@ -168,6 +202,25 @@
     refreshing = false;
   }
 
+  async function loadInstalledTools() {
+    const sessions = getActiveSshSessions();
+    if (sessions.length === 0) return;
+    installedLoading = true;
+    try {
+      // Use first active session's case ID
+      const session = sessions[0];
+      if (session && session.caseId) {
+        const result = await GetInstalledTools(session.caseId);
+        if (result && result.tools) {
+          installedTools = result.tools;
+        }
+      }
+    } catch(e) {
+      console.error('Failed to load installed tools:', e);
+    }
+    installedLoading = false;
+  }
+
   function categoryIcon(catId) {
     const icons = {
       'basic': '<svg class="inline w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><circle cx="12" cy="12" r="3" /></svg>',
@@ -216,6 +269,23 @@
     </div>
   {/if}
 
+  <!-- View Tabs -->
+  <div class="flex items-center gap-1">
+    <button
+      class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'modules' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+      onclick={() => activeView = 'modules'}
+    >{t.f8xModules || '模块'} ({catalog.length})</button>
+    <button
+      class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'tools' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+      onclick={() => { activeView = 'tools'; if (Object.keys(installedTools).length === 0) loadInstalledTools(); }}
+    >{t.f8xSingleTools || '单工具'} ({tools.length})</button>
+    <button
+      class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'presets' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+      onclick={() => activeView = 'presets'}
+    >{t.f8xPresets || '预设'} ({presets.length})</button>
+  </div>
+
+  {#if activeView === 'modules'}
   <!-- Toolbar -->
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
     <div class="px-5 py-3 flex items-center justify-between gap-4">
@@ -350,6 +420,97 @@
         {t.f8xNoResults || '没有匹配的工具'}
       </div>
     {/if}
+  {/if}
+
+  {:else if activeView === 'tools'}
+    <!-- Single Tools Search + Category Filter -->
+    <div class="flex items-center gap-3">
+      <div class="relative flex-1 max-w-xs">
+        <input
+          type="text"
+          bind:value={toolSearch}
+          placeholder={t.f8xSearchTools || '搜索工具...'}
+          class="w-full pl-8 pr-8 py-1.5 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
+        />
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        {#if toolSearch}
+          <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer" onclick={() => toolSearch = ''}>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        {/if}
+      </div>
+      <div class="flex items-center gap-1 flex-wrap flex-1">
+        <button
+          class="text-[11px] px-2.5 py-1 rounded-lg transition-colors cursor-pointer {toolCategory === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+          onclick={() => toolCategory = 'all'}
+        >{t.f8xAll || '全部'} ({tools.length})</button>
+        {#each categories as cat}
+          <button
+            class="text-[11px] px-2.5 py-1 rounded-lg transition-colors cursor-pointer {toolCategory === cat.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+            onclick={() => toolCategory = cat.id}
+          >{cat.nameZh || cat.name}</button>
+        {/each}
+      </div>
+      {#if installedLoading}
+        <div class="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin"></div>
+      {:else}
+        <button onclick={loadInstalledTools} class="text-[11px] text-gray-400 hover:text-gray-600 cursor-pointer" title={t.f8xRefreshInstalled || '刷新已安装状态'}>
+          ⟳
+        </button>
+      {/if}
+    </div>
+
+    <!-- Tools Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      {#each filteredTools() as tool (tool.id)}
+        <div class="group bg-white border border-gray-100 rounded-xl p-3 hover:border-gray-200 hover:shadow-sm transition-all">
+          <div class="flex items-start justify-between mb-1.5">
+            <h4 class="text-[12px] font-semibold text-gray-900 truncate">{tool.name}</h4>
+            {#if installedTools[tool.id]}
+              <span class="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium">{t.f8xInstalled || '已装'}</span>
+            {/if}
+          </div>
+          <p class="text-[10px] text-gray-500 mb-2 line-clamp-2 leading-relaxed">{lang === 'zh' ? (tool.descriptionZh || tool.description) : tool.description}</p>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1">
+              {#if tool.deps >= 2}
+                <span class="text-[9px] bg-blue-50 text-blue-600 px-1 py-0.5 rounded">Go</span>
+              {/if}
+              {#if tool.deps === 1 || tool.deps === 3}
+                <span class="text-[9px] bg-yellow-50 text-yellow-700 px-1 py-0.5 rounded">Python</span>
+              {/if}
+              {#if tool.url}
+                <button class="text-gray-400 hover:text-gray-600 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onclick={() => BrowserOpenURL(tool.url)} title="GitHub">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </button>
+              {/if}
+            </div>
+            <button
+              class="text-[10px] px-2 py-0.5 rounded bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+              onclick={() => openSessionPicker(['-install', tool.id], tool.name)}
+            >{t.f8xInstall || '安装'}</button>
+          </div>
+        </div>
+      {:else}
+        <div class="col-span-full text-center py-8 text-[12px] text-gray-400">
+          {t.f8xNoToolsFound || '未找到匹配的工具'}
+        </div>
+      {/each}
+    </div>
+
+  {:else if activeView === 'presets'}
+    <!-- PRESETS VIEW -->
+    <div class="flex items-center gap-2 flex-wrap">
+      {#each presets as preset}
+        <button onclick={() => { selectPreset(preset); activeView = 'modules'; }} class="text-[11px] px-4 py-2 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors">
+          <span class="font-medium">{preset.nameZh || preset.name}</span>
+          <span class="text-gray-400 ml-1">({preset.flags?.length || 0} flags)</span>
+          <p class="text-[10px] text-gray-400 mt-0.5">{preset.description}</p>
+        </button>
+      {/each}
+    </div>
   {/if}
 </div>
 
