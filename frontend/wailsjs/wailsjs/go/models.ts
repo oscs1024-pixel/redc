@@ -1557,6 +1557,55 @@ export namespace mod {
 	        this.count = source["count"];
 	    }
 	}
+	export class F8xInstalledInfo {
+	    installed_at: string;
+	    method: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xInstalledInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.installed_at = source["installed_at"];
+	        this.method = source["method"];
+	    }
+	}
+	export class F8xInstalledFile {
+	    tools: Record<string, F8xInstalledInfo>;
+	    f8x_version: string;
+	    last_updated: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xInstalledFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tools = this.convertValues(source["tools"], F8xInstalledInfo, true);
+	        this.f8x_version = source["f8x_version"];
+	        this.last_updated = source["last_updated"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class F8xSubTool {
 	    name: string;
 	    url?: string;
@@ -1638,6 +1687,34 @@ export namespace mod {
 	    }
 	}
 	
+	export class F8xTool {
+	    id: string;
+	    name: string;
+	    nameZh: string;
+	    description: string;
+	    descriptionZh: string;
+	    category: string;
+	    tags: string[];
+	    deps: number;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xTool(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.nameZh = source["nameZh"];
+	        this.description = source["description"];
+	        this.descriptionZh = source["descriptionZh"];
+	        this.category = source["category"];
+	        this.tags = source["tags"];
+	        this.deps = source["deps"];
+	        this.url = source["url"];
+	    }
+	}
 	
 	export class HTTPUser {
 	    username: string;

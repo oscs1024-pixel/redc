@@ -174,11 +174,15 @@ export function GetF8xRunningTasks():Promise<Array<main.F8xInstallRecord>>;
 
 export function GetF8xStatus(arg1:string):Promise<main.F8xStatus>;
 
+export function GetF8xTools():Promise<Array<mod.F8xTool>>;
+
 export function GetHTTPServerConfig():Promise<Record<string, any>>;
 
 export function GetHTTPServerStatus():Promise<Record<string, any>>;
 
 export function GetHTTPServerUsers():Promise<Array<mod.HTTPUser>>;
+
+export function GetInstalledTools(arg1:string):Promise<mod.F8xInstalledFile>;
 
 export function GetInstanceTypes(arg1:string,arg2:string):Promise<Array<mod.InstanceType>>;
 
@@ -248,6 +252,8 @@ export function ImportTemplates(arg1:string):Promise<Array<string>>;
 
 export function InstallAllSkills():Promise<number>;
 
+export function InstallF8xTool(arg1:string,arg2:string):Promise<string>;
+
 export function InstallPlugin(arg1:string):Promise<void>;
 
 export function InstallSkill(arg1:string,arg2:string):Promise<void>;
@@ -308,11 +314,17 @@ export function MCPGetBills(arg1:Array<string>):Promise<any>;
 
 export function MCPGetCostEstimate(arg1:string,arg2:Record<string, string>):Promise<any>;
 
+export function MCPGetF8xCatalog(arg1:string,arg2:string):Promise<any>;
+
+export function MCPGetInstalledTools(arg1:string):Promise<any>;
+
 export function MCPGetPredictedMonthlyCost():Promise<string>;
 
 export function MCPGetResourceSummary():Promise<any>;
 
 export function MCPGetTotalRuntime():Promise<string>;
+
+export function MCPInstallF8xTool(arg1:string,arg2:string):Promise<string>;
 
 export function MCPListCustomDeployments():Promise<any>;
 

@@ -37,14 +37,14 @@ var mcpSSECmd = &cobra.Command{
 	Use:   "sse [address]",
 	Short: "Start MCP server with SSE transport",
 	Long: `Start an MCP server using SSE (Server-Sent Events) transport.
-The server listens on the specified address (default: localhost:8080).
+The server listens on the specified address (default: localhost:8089).
 
 Example:
-  redc mcp sse localhost:8080
+  redc mcp sse localhost:8089
   redc mcp sse :9000`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		addr := "localhost:8080"
+		addr := "localhost:8089"
 		if len(args) > 0 {
 			addr = args[0]
 		}

@@ -579,7 +579,7 @@ redc mcp stdio
 
 **Start SSE Server** (for web-based clients):
 ```bash
-# Default (localhost:8080)
+# Default (localhost:8089)
 redc mcp sse
 
 # Custom port

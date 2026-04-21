@@ -1,6 +1,19 @@
 {
   "changelog": [
     {
+      "version": "3.2.7",
+      "date": "2026-04-21",
+      "changes": [
+        "新增：软件商店单工具管理 — 新增「单独工具」标签页，支持搜索、分类筛选、已安装状态指示和单工具安装按钮，基于 f8x catalog v4 的 ~160 个工具数据",
+        "新增：软件商店预设组合 — 新增「预设组合」标签页，提供 pentest-full、dev-env、blue-team 等 6 种一键部署方案",
+        "新增：f8x MCP 工具集成 — 新增 install_tool、get_installed_tools、get_f8x_catalog 三个 MCP 工具，AI Agent 可直接查询工具目录和远程安装工具",
+        "新增：f8x Wails 绑定 — 后端新增 GetF8xTools、GetInstalledTools、InstallF8xTool API 及前端 Wails 绑定",
+        "新增：f8x 数据类型支持 — 新增 F8xTool/F8xInstalledInfo 类型定义，解析 catalog v4 tools 字段",
+        "新增：Claude Code 一键集成 — MCP 服务器运行时，AI 集成页面显示 claude mcp add/remove 命令，支持一键复制，方便快速接入 Claude Code",
+        "变更：MCP 默认端口改为 8089 — 避免与常见 Web 服务（如 nginx、其他开发工具）的 8080 端口冲突"
+      ]
+    },
+    {
       "version": "3.2.6",
       "date": "2026-04-21",
       "changes": [

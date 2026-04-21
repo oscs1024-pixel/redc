@@ -587,7 +587,7 @@ redc mcp stdio
 
 **启动 SSE 服务器**（用于基于 Web 的客户端）：
 ```bash
-# 默认（localhost:8080）
+# 默认（localhost:8089）
 redc mcp sse
 
 # 自定义端口

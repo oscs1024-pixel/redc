@@ -103,7 +103,7 @@ SSE mode runs an HTTP server that can handle multiple clients and provides a web
 
 **Usage:**
 ```bash
-# Default address (localhost:8080)
+# Default address (localhost:8089)
 redc mcp sse
 
 # Custom address
@@ -482,10 +482,10 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 
 ```bash
 # Start the SSE server
-redc mcp sse localhost:8080
+redc mcp sse localhost:8089
 
 # In another terminal, send requests
-curl -X POST http://localhost:8080/message \
+curl -X POST http://localhost:8089/message \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",

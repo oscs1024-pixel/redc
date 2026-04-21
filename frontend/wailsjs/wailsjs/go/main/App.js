@@ -334,6 +334,10 @@ export function GetF8xStatus(arg1) {
   return window['go']['main']['App']['GetF8xStatus'](arg1);
 }
 
+export function GetF8xTools() {
+  return window['go']['main']['App']['GetF8xTools']();
+}
+
 export function GetHTTPServerConfig() {
   return window['go']['main']['App']['GetHTTPServerConfig']();
 }
@@ -344,6 +348,10 @@ export function GetHTTPServerStatus() {
 
 export function GetHTTPServerUsers() {
   return window['go']['main']['App']['GetHTTPServerUsers']();
+}
+
+export function GetInstalledTools(arg1) {
+  return window['go']['main']['App']['GetInstalledTools'](arg1);
 }
 
 export function GetInstanceTypes(arg1, arg2) {
@@ -482,6 +490,10 @@ export function InstallAllSkills() {
   return window['go']['main']['App']['InstallAllSkills']();
 }
 
+export function InstallF8xTool(arg1, arg2) {
+  return window['go']['main']['App']['InstallF8xTool'](arg1, arg2);
+}
+
 export function InstallPlugin(arg1) {
   return window['go']['main']['App']['InstallPlugin'](arg1);
 }
@@ -602,6 +614,14 @@ export function MCPGetCostEstimate(arg1, arg2) {
   return window['go']['main']['App']['MCPGetCostEstimate'](arg1, arg2);
 }
 
+export function MCPGetF8xCatalog(arg1, arg2) {
+  return window['go']['main']['App']['MCPGetF8xCatalog'](arg1, arg2);
+}
+
+export function MCPGetInstalledTools(arg1) {
+  return window['go']['main']['App']['MCPGetInstalledTools'](arg1);
+}
+
 export function MCPGetPredictedMonthlyCost() {
   return window['go']['main']['App']['MCPGetPredictedMonthlyCost']();
 }
@@ -612,6 +632,10 @@ export function MCPGetResourceSummary() {
 
 export function MCPGetTotalRuntime() {
   return window['go']['main']['App']['MCPGetTotalRuntime']();
+}
+
+export function MCPInstallF8xTool(arg1, arg2) {
+  return window['go']['main']['App']['MCPInstallF8xTool'](arg1, arg2);
 }
 
 export function MCPListCustomDeployments() {

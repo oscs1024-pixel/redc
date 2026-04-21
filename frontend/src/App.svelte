@@ -68,7 +68,7 @@
 
   // MCP state
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
-  let mcpForm = $state({ mode: 'sse', address: 'localhost:8080' });
+  let mcpForm = $state({ mode: 'sse', address: 'localhost:8089' });
   let mcpLoading = $state(false);
 
   // Project state

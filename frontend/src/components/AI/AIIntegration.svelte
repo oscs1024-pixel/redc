@@ -7,11 +7,36 @@
 
   let { t, onTabChange = () => {} } = $props();
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
-  let mcpForm = $state({ mode: 'sse', address: 'localhost:8080' });
+  let mcpForm = $state({ mode: 'sse', address: 'localhost:8089' });
   let mcpLoading = $state(false);
   let error = $state('');
   let successMessage = $state('');
   let subTab = $state('overview');
+  let copiedCmd = $state('');
+
+  function getClaudeAddCmd(address) {
+    return `claude mcp add redc -t http http://${address}/mcp -s user`;
+  }
+
+  const claudeRemoveCmd = 'claude mcp remove redc -s user';
+
+  async function copyCommand(cmd, label) {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      copiedCmd = label;
+      setTimeout(() => copiedCmd = '', 2000);
+    } catch {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = cmd;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      copiedCmd = label;
+      setTimeout(() => copiedCmd = '', 2000);
+    }
+  }
 
   // AI Configuration state (loaded from Profile)
   let aiConfig = $state({
@@ -451,6 +476,49 @@
           </div>
         </div>
       </div>
+
+      <!-- Claude Code Integration -->
+      <div class="mt-3 bg-gray-50 rounded-lg p-3 sm:p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          <span class="text-[12px] font-medium text-gray-700">{t.claudeCodeIntegration}</span>
+        </div>
+        <p class="text-[11px] text-gray-500 mb-3">{t.claudeCodeIntegrationDesc}</p>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2">
+            <code class="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-[11px] font-mono text-gray-800 select-all overflow-x-auto whitespace-nowrap">{getClaudeAddCmd(mcpStatus.address)}</code>
+            <button
+              onclick={() => copyCommand(getClaudeAddCmd(mcpStatus.address), 'add')}
+              class="flex-shrink-0 h-7 px-2.5 bg-gray-900 text-white text-[11px] font-medium rounded-md hover:bg-gray-800 transition-colors cursor-pointer inline-flex items-center gap-1"
+            >
+              {#if copiedCmd === 'add'}
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                {t.copied}
+              {:else}
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+                {t.addToClaudeCode}
+              {/if}
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <code class="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-[11px] font-mono text-gray-800 select-all overflow-x-auto whitespace-nowrap">{claudeRemoveCmd}</code>
+            <button
+              onclick={() => copyCommand(claudeRemoveCmd, 'remove')}
+              class="flex-shrink-0 h-7 px-2.5 bg-white text-gray-600 text-[11px] font-medium rounded-md border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer inline-flex items-center gap-1"
+            >
+              {#if copiedCmd === 'remove'}
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                {t.copied}
+              {:else}
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+                {t.removeFromClaudeCode}
+              {/if}
+            </button>
+          </div>
+        </div>
+      </div>
     {:else}
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 text-[12px] text-gray-500">
@@ -460,7 +528,7 @@
         <div class="flex-1">
           <input 
             type="text" 
-            placeholder="localhost:8080" 
+            placeholder="localhost:8089" 
             class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
             bind:value={mcpForm.address} 
           />
