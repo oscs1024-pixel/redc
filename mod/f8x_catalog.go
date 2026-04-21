@@ -46,13 +46,41 @@ type F8xPreset struct {
 	Flags       []string `json:"flags"`
 }
 
+// F8xTool represents an individual tool installable via `f8x -install <id>`
+type F8xTool struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	NameZh        string   `json:"nameZh"`
+	Description   string   `json:"description"`
+	DescriptionZh string   `json:"descriptionZh"`
+	Category      string   `json:"category"`
+	Tags          []string `json:"tags"`
+	Deps          int      `json:"deps"`
+	URL           string   `json:"url"`
+}
+
+// F8xInstalledInfo represents a single tool's install record
+type F8xInstalledInfo struct {
+	InstalledAt string `json:"installed_at"`
+	Method      string `json:"method"`
+}
+
+// F8xInstalledFile represents the /opt/.f8x/installed.json structure
+type F8xInstalledFile struct {
+	Tools       map[string]F8xInstalledInfo `json:"tools"`
+	F8xVersion  string                      `json:"f8x_version"`
+	LastUpdated string                      `json:"last_updated"`
+}
+
 // F8xRemoteCatalog is the structure returned by the remote catalog.json
 type F8xRemoteCatalog struct {
-	Version    string           `json:"version"`
-	UpdatedAt  string           `json:"updated_at"`
-	Modules    []F8xModule      `json:"modules"`
-	Categories []F8xCategoryInfo `json:"categories"`
-	Presets    []F8xPreset      `json:"presets"`
+	Version        string            `json:"version"`
+	CatalogVersion int               `json:"catalog_version"`
+	UpdatedAt      string            `json:"updated_at"`
+	Modules        []F8xModule       `json:"modules"`
+	Tools          []F8xTool         `json:"tools"`
+	Categories     []F8xCategoryInfo `json:"categories"`
+	Presets        []F8xPreset       `json:"presets"`
 }
 
 // F8xDefaultURL is the default download URL for f8x
@@ -155,4 +183,13 @@ func GetF8xPresets() []F8xPreset {
 		return remote.Presets
 	}
 	return nil
+}
+
+// GetF8xTools returns the individual tools list from the cached catalog.
+func GetF8xTools() []F8xTool {
+	catalog, err := FetchF8xRemoteCatalog()
+	if err != nil || catalog == nil {
+		return nil
+	}
+	return catalog.Tools
 }
