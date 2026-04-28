@@ -427,7 +427,7 @@ let { t, onTabChange = () => {} } = $props();
         ListCases(),
         ListTemplates()
       ]);
-      allTagNames = await GetAllTagNames().catch(() => []);
+      allTagNames = (await GetAllTagNames().catch(() => [])) ?? [];
       
       // Note: Template list cost preview is now manual (user must click button)
       // This prevents automatic loading of all template costs on page load

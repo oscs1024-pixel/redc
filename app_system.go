@@ -917,7 +917,7 @@ if err != nil || settings == nil || settings.CaseTags == nil {
 return []string{}
 }
 seen := make(map[string]bool)
-var tags []string
+tags := []string{}
 for _, ts := range settings.CaseTags {
 for _, t := range ts {
 if !seen[t] {
