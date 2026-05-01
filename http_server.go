@@ -119,7 +119,7 @@ var methodMinRole = map[string]string{
 	"ListProfiles": "viewer", "GetActiveProfile": "viewer",
 	"GetProvidersConfig": "viewer", "GetCurrentProject": "viewer", "ListProjects": "viewer",
 	"ListTemplates": "viewer", "ListAllTemplates": "viewer", "GetTemplateVariables": "viewer",
-	"FetchRegistryTemplates": "viewer", "FetchTemplateReadme": "viewer",
+	"FetchRegistryTemplates": "viewer", "FetchTemplateReadme": "viewer", "FetchCaseReadme": "viewer", "FetchCaseReadmeInfo": "viewer",
 	"GetTemplateFiles": "viewer", "GetTemplateMetadata": "viewer", "GetBaseTemplates": "viewer",
 	"ListUserdataTemplates": "viewer", "ListComposeTemplates": "viewer",
 	"ListCustomDeployments": "viewer", "GetDeploymentHistory": "viewer",

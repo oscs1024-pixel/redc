@@ -1,9 +1,10 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, GetCasePlanPreview, SetCaseTags, GetAllTagNames, DeleteTagByName, CloneCase, ListPlugins } from '../../../wailsjs/go/main/App.js';
-  import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, GetCasePlanPreview, SetCaseTags, GetAllTagNames, DeleteTagByName, CloneCase, ListPlugins, FetchCaseReadmeInfo } from '../../../wailsjs/go/main/App.js';
+  import { EventsOn, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
+  import { parseReadmeMarkdown, handleReadmeLinkClick } from '../../lib/readme.js';
   import SSHModal from './SSHModal.svelte';
   import ScheduleDialog from './ScheduleDialog.svelte';
   // import ScheduledTasksManager from './ScheduledTasksManager.svelte'; // Moved to TaskCenter
@@ -13,13 +14,14 @@
   import PageGuide from '../UI/PageGuide.svelte';
   import HelpTooltip from '../UI/HelpTooltip.svelte';
 
-let { t, onTabChange = () => {} } = $props();
+let { t, lang = 'zh', onTabChange = () => {} } = $props();
   let cases = $state([]);
   let templates = $state([]);
   let selectedTemplate = $state('');
   let newCaseName = $state('');
   let expandedCase = $state(null);
   let caseOutputs = $state({});
+  let caseReadmeModal = $state({ show: false, content: '', html: '', loading: false, caseName: '', templateName: '', source: '' });
   let deleteConfirm = $state({ show: false, caseId: null, caseName: '' });
   let stopConfirm = $state({ show: false, caseId: null, caseName: '' });
   let pluginCheckModal = $state({
@@ -891,6 +893,76 @@ let { t, onTabChange = () => {} } = $props();
       setTimeout(() => { copiedAllKey = null; }, 2000);
     } catch (e) {
       console.error('Failed to copy all outputs:', e);
+    }
+  }
+
+  async function handleShowCaseReadme(caseInfo) {
+    const templateName = caseInfo?.type || '';
+    const caseName = caseInfo?.name || templateName;
+
+    caseReadmeModal = { show: true, content: '', html: '', loading: true, caseName, templateName };
+
+    try {
+      const readme = await FetchCaseReadmeInfo(caseInfo.id, lang || 'zh');
+      const content = readme?.content || '';
+      const html = parseReadmeMarkdown(content, templateName);
+      caseReadmeModal = { ...caseReadmeModal, content, html, source: readme?.source || '', loading: false };
+    } catch (e) {
+      const message = e?.message || String(e);
+      caseReadmeModal = {
+        ...caseReadmeModal,
+        content: message,
+        html: `<p class="text-red-500">${message}</p>`,
+        source: '',
+        loading: false,
+      };
+    }
+  }
+
+  function closeCaseReadmeModal() {
+    caseReadmeModal = { show: false, content: '', html: '', loading: false, caseName: '', templateName: '', source: '' };
+  }
+
+  function handleCaseReadmeClick(e) {
+    handleReadmeLinkClick(e, BrowserOpenURL);
+  }
+
+  function getCaseReadmeSourceBadgeClass(source) {
+    switch (source) {
+      case 'case-local':
+        return 'bg-emerald-50 text-emerald-700';
+      case 'template-local':
+        return 'bg-amber-50 text-amber-700';
+      case 'remote-registry':
+        return 'bg-sky-50 text-sky-700';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  }
+
+  function getCaseReadmeSourceLabel(source) {
+    if (lang === 'en') {
+      switch (source) {
+        case 'case-local':
+          return 'Source: Case Local';
+        case 'template-local':
+          return 'Source: Template Local';
+        case 'remote-registry':
+          return 'Source: Remote Registry';
+        default:
+          return 'Source: Unknown';
+      }
+    }
+
+    switch (source) {
+      case 'case-local':
+        return '当前来源：场景本地';
+      case 'template-local':
+        return '当前来源：模板本地';
+      case 'remote-registry':
+        return '当前来源：远程仓库';
+      default:
+        return '当前来源：未知';
     }
   }
 
@@ -1815,26 +1887,36 @@ let { t, onTabChange = () => {} } = $props();
               <td colspan="7" class="px-5 py-4">
                 <div class="pl-6">
                   {#if c.state === 'running'}
-                    {#if caseOutputs[c.id]}
-                      <div class="flex items-center justify-between mb-3">
-                        <span class="text-[12px] font-medium text-gray-700">{t.outputInfo || '输出信息'}</span>
+                    <div class="flex items-center justify-between mb-3">
+                      <span class="text-[12px] font-medium text-gray-700">{t.outputInfo || '输出信息'}</span>
+                      <div class="flex items-center gap-2">
                         <button
-                          class="px-2 py-1 text-[11px] font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
-                          onclick={() => copyAllOutputs(caseOutputs[c.id])}
+                          class="px-2 py-1 text-[11px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          onclick={() => handleShowCaseReadme(c)}
                         >
-                          {#if copiedAllKey === c.id}
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            {t.copied || '已复制'}
-                          {:else}
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            {t.copyAll || '复制全部'}
-                          {/if}
+                          {t.readme || '使用说明'}
                         </button>
+                        {#if caseOutputs[c.id]}
+                          <button
+                            class="px-2 py-1 text-[11px] font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+                            onclick={() => copyAllOutputs(caseOutputs[c.id])}
+                          >
+                            {#if copiedAllKey === c.id}
+                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              {t.copied || '已复制'}
+                            {:else}
+                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              {t.copyAll || '复制全部'}
+                            {/if}
+                          </button>
+                        {/if}
                       </div>
+                    </div>
+                    {#if caseOutputs[c.id]}
                       <div class="grid grid-cols-2 gap-3">
                         {#each Object.entries(caseOutputs[c.id]) as [key, value]}
                           <div class="bg-white rounded-lg p-3 border border-gray-100 group relative">
@@ -1926,6 +2008,44 @@ let { t, onTabChange = () => {} } = $props();
     {/if}
   </div>
 </div>
+
+<Modal show={caseReadmeModal.show} onclose={closeCaseReadmeModal} class="overflow-visible">
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div>
+        <h2 class="text-[15px] font-medium text-gray-900">{t.readme || '使用说明'}</h2>
+        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+          <p class="text-[12px] text-gray-500">{caseReadmeModal.caseName}{#if caseReadmeModal.templateName} · {caseReadmeModal.templateName}{/if}</p>
+          {#if caseReadmeModal.source}
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {getCaseReadmeSourceBadgeClass(caseReadmeModal.source)}">
+              {getCaseReadmeSourceLabel(caseReadmeModal.source)}
+            </span>
+          {/if}
+        </div>
+      </div>
+      <button class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" onclick={closeCaseReadmeModal} aria-label={t.close || '关闭'}>
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="px-6 py-4 overflow-auto flex-1">
+      {#if caseReadmeModal.loading}
+        <div class="flex items-center justify-center py-8">
+          <svg class="animate-spin h-6 w-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      {:else}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div class="text-[13px] text-gray-700" onclick={handleCaseReadmeClick}>
+          {@html caseReadmeModal.html || caseReadmeModal.content}
+        </div>
+      {/if}
+    </div>
+  </div>
+</Modal>
 
 <!-- Delete Confirmation Modal -->
 <Modal show={deleteConfirm.show} onclose={cancelDelete}>

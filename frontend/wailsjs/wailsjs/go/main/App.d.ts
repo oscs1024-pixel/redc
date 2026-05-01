@@ -124,6 +124,10 @@ export function ExportConsoleLogs(arg1:string):Promise<void>;
 
 export function ExportTemplates(arg1:Array<string>):Promise<string>;
 
+export function FetchCaseReadme(arg1:string,arg2:string):Promise<string>;
+
+export function FetchCaseReadmeInfo(arg1:string,arg2:string):Promise<main.CaseReadmeInfo>;
+
 export function FetchPluginRegistry():Promise<Array<plugin.RegistryPlugin>>;
 
 export function FetchRegistryTemplates(arg1:string):Promise<Array<main.RegistryTemplate>>;

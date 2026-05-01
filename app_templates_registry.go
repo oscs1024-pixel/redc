@@ -4,10 +4,13 @@ import (
 	"archive/zip"
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"red-cloud/i18n"
@@ -316,32 +319,214 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 }
 
 func (a *App) FetchTemplateReadme(templateName string, lang string) (string, error) {
-	readmeFiles := []string{}
+	templateDir := filepath.Join(redc.TemplateDir, templateName)
+	if content, err := loadLocalReadme(templateDir, []string{templateDir}, lang); err == nil {
+		return content, nil
+	}
+
+	return fetchRemoteTemplateReadme(templateName, lang)
+}
+
+type CaseReadmeInfo struct {
+	Content string `json:"content"`
+	Source  string `json:"source"`
+}
+
+func (a *App) FetchCaseReadme(caseID string, lang string) (string, error) {
+	info, err := a.FetchCaseReadmeInfo(caseID, lang)
+	if err != nil {
+		return "", err
+	}
+	return info.Content, nil
+}
+
+func (a *App) FetchCaseReadmeInfo(caseID string, lang string) (CaseReadmeInfo, error) {
+	a.mu.Lock()
+	project := a.project
+	initError := a.initError
+	a.mu.Unlock()
+
+	if project == nil {
+		if initError != "" {
+			return CaseReadmeInfo{}, fmt.Errorf(initError)
+		}
+		return CaseReadmeInfo{}, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
+	}
+
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		return CaseReadmeInfo{}, err
+	}
+
+	templateDir := filepath.Join(redc.TemplateDir, c.Type)
+	if content, err := loadLocalReadme(c.Path, []string{c.Path, templateDir}, lang); err == nil {
+		return CaseReadmeInfo{Content: content, Source: "case-local"}, nil
+	}
+
+	if content, err := loadLocalReadme(templateDir, []string{templateDir}, lang); err == nil {
+		return CaseReadmeInfo{Content: content, Source: "template-local"}, nil
+	}
+
+	content, err := fetchRemoteTemplateReadme(c.Type, lang)
+	if err != nil {
+		return CaseReadmeInfo{}, err
+	}
+
+	return CaseReadmeInfo{Content: content, Source: "remote-registry"}, nil
+}
+
+func readmeFileCandidates(lang string) []string {
 	if lang == "en" {
-		readmeFiles = []string{"README_EN.md", "README.md"}
-	} else {
-		readmeFiles = []string{"README.md", "README_EN.md"}
+		return []string{"README_EN.md", "README.md"}
+	}
+	return []string{"README.md", "README_EN.md"}
+}
+
+func loadLocalReadme(baseDir string, assetDirs []string, lang string) (string, error) {
+	if baseDir == "" {
+		return "", fmt.Errorf("readme base dir is empty")
 	}
 
 	var lastErr error
-	for _, readmeFile := range readmeFiles {
-		readmeURL := fmt.Sprintf("https://raw.githubusercontent.com/wgpsec/redc-template/master/%s/%s", templateName, readmeFile)
-		resp, err := http.Get(readmeURL)
+	for _, readmeFile := range readmeFileCandidates(lang) {
+		readmePath := filepath.Join(baseDir, readmeFile)
+		content, err := os.ReadFile(readmePath)
 		if err != nil {
 			lastErr = err
 			continue
 		}
-		defer resp.Body.Close()
+		return rewriteLocalReadmeReferences(string(content), assetDirs), nil
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("README not found")
+	}
+	return "", fmt.Errorf("failed to load local README from %s: %w", baseDir, lastErr)
+}
+
+func rewriteLocalReadmeReferences(content string, assetDirs []string) string {
+	linkRegex := regexp.MustCompile(`!?\[([^\]]*)\]\(([^)]+)\)`)
+	return linkRegex.ReplaceAllStringFunc(content, func(match string) string {
+		parts := linkRegex.FindStringSubmatch(match)
+		if len(parts) != 3 {
+			return match
+		}
+
+		label := parts[1]
+		target := strings.TrimSpace(parts[2])
+		if target == "" || strings.HasPrefix(target, "#") || isAbsoluteReadmeTarget(target) {
+			return match
+		}
+
+		parsed, err := url.Parse(target)
+		if err != nil || parsed.Path == "" {
+			return match
+		}
+
+		resolvedPath, err := resolveLocalReadmePath(parsed.Path, assetDirs)
+		if err != nil {
+			return match
+		}
+
+		if strings.HasPrefix(match, "!") {
+			dataURL, err := localFileToDataURL(resolvedPath)
+			if err != nil {
+				return match
+			}
+			return fmt.Sprintf("![%s](%s)", label, dataURL)
+		}
+
+		return fmt.Sprintf("[%s](%s)", label, localPathToFileURL(resolvedPath, parsed.RawQuery, parsed.Fragment))
+	})
+}
+
+func isAbsoluteReadmeTarget(target string) bool {
+	lowerTarget := strings.ToLower(target)
+	return strings.HasPrefix(lowerTarget, "http://") ||
+		strings.HasPrefix(lowerTarget, "https://") ||
+		strings.HasPrefix(lowerTarget, "data:") ||
+		strings.HasPrefix(lowerTarget, "file://") ||
+		strings.HasPrefix(lowerTarget, "mailto:") ||
+		strings.HasPrefix(target, "/")
+}
+
+func resolveLocalReadmePath(rawPath string, assetDirs []string) (string, error) {
+	decodedPath, err := url.PathUnescape(rawPath)
+	if err != nil {
+		decodedPath = rawPath
+	}
+
+	for _, dir := range assetDirs {
+		if dir == "" {
+			continue
+		}
+
+		candidate := filepath.Clean(filepath.Join(dir, filepath.FromSlash(decodedPath)))
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+
+	return "", fmt.Errorf("local README target not found: %s", rawPath)
+}
+
+func localFileToDataURL(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	mimeType := mime.TypeByExtension(strings.ToLower(filepath.Ext(filePath)))
+	if mimeType == "" {
+		mimeType = http.DetectContentType(data)
+	}
+	if !strings.HasPrefix(mimeType, "image/") {
+		return "", fmt.Errorf("unsupported README asset type: %s", mimeType)
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(data)
+	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded), nil
+}
+
+func localPathToFileURL(filePath string, rawQuery string, fragment string) string {
+	urlPath := filepath.ToSlash(filePath)
+	if vol := filepath.VolumeName(filePath); vol != "" {
+		urlPath = "/" + urlPath
+	}
+
+	parsed := &url.URL{
+		Scheme:   "file",
+		Path:     urlPath,
+		RawQuery: rawQuery,
+		Fragment: fragment,
+	}
+	return parsed.String()
+}
+
+func fetchRemoteTemplateReadme(templateName string, lang string) (string, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	var lastErr error
+
+	for _, readmeFile := range readmeFileCandidates(lang) {
+		readmeURL := fmt.Sprintf("https://raw.githubusercontent.com/wgpsec/redc-template/master/%s/%s", templateName, readmeFile)
+		resp, err := client.Get(readmeURL)
+		if err != nil {
+			lastErr = err
+			continue
+		}
 
 		if resp.StatusCode == http.StatusOK {
 			content, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			if err != nil {
 				lastErr = err
 				continue
 			}
 			return string(content), nil
 		}
+
 		lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
+		resp.Body.Close()
 	}
 
 	return "", fmt.Errorf("failed to fetch README: %v", lastErr)

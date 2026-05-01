@@ -222,6 +222,14 @@ export function FetchTemplateReadme(arg1, arg2) {
   return window['go']['main']['App']['FetchTemplateReadme'](arg1, arg2);
 }
 
+export function FetchCaseReadme(arg1, arg2) {
+  return window['go']['main']['App']['FetchCaseReadme'](arg1, arg2);
+}
+
+export function FetchCaseReadmeInfo(arg1, arg2) {
+  return window['go']['main']['App']['FetchCaseReadmeInfo'](arg1, arg2);
+}
+
 export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
 }

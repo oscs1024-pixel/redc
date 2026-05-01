@@ -291,6 +291,20 @@ export namespace main {
 	        this.plugins = source["plugins"];
 	    }
 	}
+	export class CaseReadmeInfo {
+	    content: string;
+	    source: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CaseReadmeInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.content = source["content"];
+	        this.source = source["source"];
+	    }
+	}
 	export class ComposeServiceSummary {
 	    name: string;
 	    rawName: string;

@@ -422,7 +422,7 @@
               <Dashboard {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'cases'}
-              <Cases bind:this={dashboardComponent} {t} onTabChange={(tab) => activeTab = tab} />
+              <Cases bind:this={dashboardComponent} {t} {lang} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'console'}
               <Console bind:logs {t} />

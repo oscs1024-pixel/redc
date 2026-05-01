@@ -113,6 +113,10 @@ export function FetchSkillsRegistry():Promise<Array<ai.RegistrySkill>>;
 
 export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 
+export function FetchCaseReadme(arg1:string,arg2:string):Promise<string>;
+
+export function FetchCaseReadmeInfo(arg1:string,arg2:string):Promise<{content:string; source:string}>;
+
 export function GetActiveProfile():Promise<mod.ProfileInfo>;
 
 export function GetAuditLogs(arg1:number,arg2:number,arg3:string,arg4:string):Promise<any>;

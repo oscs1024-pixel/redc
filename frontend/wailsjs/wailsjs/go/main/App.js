@@ -234,6 +234,14 @@ export function ExportTemplates(arg1) {
   return window['go']['main']['App']['ExportTemplates'](arg1);
 }
 
+export function FetchCaseReadme(arg1, arg2) {
+  return window['go']['main']['App']['FetchCaseReadme'](arg1, arg2);
+}
+
+export function FetchCaseReadmeInfo(arg1, arg2) {
+  return window['go']['main']['App']['FetchCaseReadmeInfo'](arg1, arg2);
+}
+
 export function FetchPluginRegistry() {
   return window['go']['main']['App']['FetchPluginRegistry']();
 }
