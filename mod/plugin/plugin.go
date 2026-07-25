@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	redc "red-cloud/mod"
+	"strings"
 	"sync"
+
+	version "github.com/hashicorp/go-version"
 )
 
 // PluginManifest is the plugin.json schema
@@ -25,14 +29,14 @@ type PluginManifest struct {
 
 // PluginCapabilities declares what the plugin provides
 type PluginCapabilities struct {
-	Templates []string          `json:"templates,omitempty"` // glob patterns relative to plugin dir
-	Userdata  []string          `json:"userdata,omitempty"`  // glob patterns
-	Hooks     map[string]interface{} `json:"hooks,omitempty"` // hookPoint → script path (string) or config (object)
+	Templates []string               `json:"templates,omitempty"` // glob patterns relative to plugin dir
+	Userdata  []string               `json:"userdata,omitempty"`  // glob patterns
+	Hooks     map[string]interface{} `json:"hooks,omitempty"`     // hookPoint → script path (string) or config (object)
 }
 
 // ConfigField describes a single config parameter
 type ConfigField struct {
-	Type        string `json:"type"`                  // "string", "number", "boolean"
+	Type        string `json:"type"` // "string", "number", "boolean"
 	Required    bool   `json:"required,omitempty"`
 	Description string `json:"description,omitempty"`
 	Default     string `json:"default,omitempty"`
@@ -111,6 +115,19 @@ func loadManifest(dir string) (PluginManifest, error) {
 	}
 	if m.Name == "" {
 		return m, fmt.Errorf("plugin.json missing 'name' field")
+	}
+	if m.MinRedCVersion != "" {
+		required, requiredErr := version.NewVersion(strings.TrimPrefix(m.MinRedCVersion, "v"))
+		current, currentErr := version.NewVersion(strings.TrimPrefix(redc.Version, "v"))
+		if requiredErr != nil {
+			return m, fmt.Errorf("plugin.json has invalid min_redc_version %q", m.MinRedCVersion)
+		}
+		if currentErr != nil {
+			return m, fmt.Errorf("redc has invalid version %q", redc.Version)
+		}
+		if current.LessThan(required) {
+			return m, fmt.Errorf("plugin %s requires redc %s or newer (current %s)", m.Name, m.MinRedCVersion, redc.Version)
+		}
 	}
 	return m, nil
 }

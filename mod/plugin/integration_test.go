@@ -86,3 +86,126 @@ proxies:
 		t.Errorf("expected node_count=3, got %q", results["clash_node_count"])
 	}
 }
+
+func TestRunHooksPersistsPluginOutputsPrivately(t *testing.T) {
+	pluginsDir := t.TempDir()
+	pluginDir := filepath.Join(pluginsDir, "redc-plugin-output-test")
+	if err := os.MkdirAll(filepath.Join(pluginDir, "hooks"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	manifest := `{
+  "name": "redc-plugin-output-test",
+  "version": "1.0.0",
+  "description": "test",
+  "capabilities": {"hooks": {"post-apply": "hooks/post-apply.sh"}}
+}`
+	if err := os.WriteFile(filepath.Join(pluginDir, "plugin.json"), []byte(manifest), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(pluginDir, "hooks", "post-apply.sh"),
+		[]byte("echo 'REDC_OUTPUT:new_value=secret-bearing-output'\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	caseDir := t.TempDir()
+	outputsPath := filepath.Join(caseDir, pluginOutputsFile)
+	if err := os.WriteFile(outputsPath, []byte(`{"existing":"preserved"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := NewPluginManager(pluginsDir)
+	if err := manager.LoadAll(); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.RunHooks(HookPostApply, &HookContext{
+		CasePath:       caseDir,
+		AllowedPlugins: []string{"redc-plugin-output-test"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := LoadPluginOutputs(caseDir)
+	if got["existing"] != "preserved" || got["new_value"] != "secret-bearing-output" {
+		t.Fatalf("plugin outputs = %#v", got)
+	}
+	info, err := os.Stat(outputsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotMode := info.Mode().Perm(); gotMode != 0600 {
+		t.Fatalf("plugin_outputs.json mode = %04o, want 0600", gotMode)
+	}
+	tempFiles, err := filepath.Glob(filepath.Join(caseDir, ".plugin_outputs.json.tmp-*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tempFiles) != 0 {
+		t.Fatalf("temporary output files left behind: %v", tempFiles)
+	}
+}
+
+func TestRunHooksProvidesStableCaseID(t *testing.T) {
+	pluginsDir := t.TempDir()
+	pluginDir := filepath.Join(pluginsDir, "redc-plugin-case-id-test")
+	if err := os.MkdirAll(filepath.Join(pluginDir, "hooks"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	manifest := `{
+  "name": "redc-plugin-case-id-test",
+  "version": "1.0.0",
+  "description": "test",
+  "capabilities": {"hooks": {"post-apply": "hooks/post-apply.sh"}}
+}`
+	if err := os.WriteFile(filepath.Join(pluginDir, "plugin.json"), []byte(manifest), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(pluginDir, "hooks", "post-apply.sh"),
+		[]byte("echo \"REDC_OUTPUT:case_id=$REDC_CASE_ID\"\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := NewPluginManager(pluginsDir)
+	if err := manager.LoadAll(); err != nil {
+		t.Fatal(err)
+	}
+	caseDir := t.TempDir()
+	if err := manager.RunHooks(HookPostApply, &HookContext{
+		CaseID:         "4dfaf64b-426c-40ec-84d7-456d2a43dc67",
+		CasePath:       caseDir,
+		AllowedPlugins: []string{"redc-plugin-case-id-test"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := LoadPluginOutputs(caseDir)["case_id"]; got != "4dfaf64b-426c-40ec-84d7-456d2a43dc67" {
+		t.Fatalf("case_id output = %q", got)
+	}
+}
+
+func TestLoadManifestEnforcesMinimumRedCVersion(t *testing.T) {
+	pluginDir := t.TempDir()
+	manifestPath := filepath.Join(pluginDir, "plugin.json")
+	writeManifest := func(minVersion string) {
+		t.Helper()
+		raw := `{"name":"versioned-plugin","version":"1.0.0","description":"test","min_redc_version":"` + minVersion + `","capabilities":{}}`
+		if err := os.WriteFile(manifestPath, []byte(raw), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeManifest("3.3.8")
+	if _, err := loadManifest(pluginDir); err != nil {
+		t.Fatalf("compatible plugin was rejected: %v", err)
+	}
+
+	writeManifest("3.3.9")
+	if _, err := loadManifest(pluginDir); err == nil || !strings.Contains(err.Error(), "requires redc 3.3.9 or newer") {
+		t.Fatalf("incompatible plugin error = %v", err)
+	}
+}

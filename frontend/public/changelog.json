@@ -1,6 +1,19 @@
 {
   "changelog": [
     {
+      "version": "3.3.7",
+      "date": "2026-07-26",
+      "changes": [
+        "变更：PoJun 代理池输出收敛为单个自包含 bundle.json，跨机器导入无需再配对 manifest.json 与 proxies.yaml",
+        "安全：bundle.json 继续使用 0600 权限和原子替换，revision 对规范化节点数组计算 SHA-256",
+        "修复：插件安装与加载强制检查 min_redc_version，避免旧 Core 静默运行不兼容插件",
+        "新增：插件脚本与 Go Template 上下文提供稳定 Case ID，支持以 Case 生命周期为边界生成外部系统可复用的资源标识",
+        "新增：Go Template 提供跨平台 PoJun Shadowsocks bundle writer，在 Windows、macOS 和 Linux 生成私有、可校验的代理节点清单",
+        "新增：redc status <case> -o json 返回独立 plugin_outputs 对象，不再与 Terraform outputs 混合",
+        "安全：plugin_outputs.json 与代理 bundle 使用同目录临时文件、fsync 和跨平台原子替换写入；POSIX 敏感文件权限固定为 0600"
+      ]
+    },
+    {
       "version": "3.3.6",
       "date": "2026-06-04",
       "changes": [

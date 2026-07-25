@@ -150,6 +150,7 @@ func (a *App) setupPluginHooks(c *redc.Case) {
 		}
 
 		ctx := &plugin.HookContext{
+			CaseID:         cc.Id,
 			CaseName:       cc.Name,
 			CasePath:       cc.Path,
 			CaseTemplate:   cc.Type,

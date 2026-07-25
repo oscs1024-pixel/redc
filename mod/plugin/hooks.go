@@ -38,12 +38,13 @@ type HookEntry struct {
 
 // HookContext provides case information to hook scripts via environment variables
 type HookContext struct {
+	CaseID         string
 	CaseName       string
 	CasePath       string
 	CaseTemplate   string
 	CaseState      string
-	OutputJSON     string // JSON-encoded terraform outputs
-	CaseVars       string // JSON-encoded case parameters (terraform -var values)
+	OutputJSON     string   // JSON-encoded terraform outputs
+	CaseVars       string   // JSON-encoded case parameters (terraform -var values)
 	AllowedPlugins []string // if non-empty, only run hooks from these plugins
 }
 
@@ -162,6 +163,7 @@ func executeScriptHook(hook HookEntry, hookPoint string, hctx *HookContext) (map
 
 	if hctx != nil {
 		env = append(env,
+			"REDC_CASE_ID="+hctx.CaseID,
 			"REDC_CASE_NAME="+hctx.CaseName,
 			"REDC_CASE_PATH="+hctx.CasePath,
 			"REDC_CASE_TEMPLATE="+hctx.CaseTemplate,
@@ -232,7 +234,40 @@ func savePluginOutputs(casePath string, outputs map[string]string) {
 		gologger.Warning().Msgf("plugin: failed to marshal outputs: %v", err)
 		return
 	}
-	if err := os.WriteFile(filepath.Join(casePath, pluginOutputsFile), data, 0644); err != nil {
+	if err := writePrivateFileAtomic(filepath.Join(casePath, pluginOutputsFile), data); err != nil {
 		gologger.Warning().Msgf("plugin: failed to write outputs: %v", err)
 	}
+}
+
+func writePrivateFileAtomic(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	closeWithError := func(writeErr error) error {
+		if closeErr := tmp.Close(); writeErr == nil {
+			return closeErr
+		}
+		return writeErr
+	}
+	if err := tmp.Chmod(0600); err != nil {
+		return closeWithError(err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		return closeWithError(err)
+	}
+	if err := tmp.Sync(); err != nil {
+		return closeWithError(err)
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := replaceFileAtomic(tmpPath, path); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0600)
 }

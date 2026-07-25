@@ -15,6 +15,7 @@ import (
 
 // TemplateContext is the data available inside .tmpl hook files.
 type TemplateContext struct {
+	CaseID       string
 	CaseName     string
 	CasePath     string
 	CaseTemplate string
@@ -50,6 +51,9 @@ func executeTemplateHook(hook HookEntry, hctx *HookContext) (map[string]string, 
 	}
 	fm["readFile"] = func(path string) (string, error) {
 		return safeReadFile(path, ctx.CasePath, ctx.PluginDir)
+	}
+	fm["writePojunProxyBundle"] = func(poolID, port, password string) (map[string]string, error) {
+		return writePojunProxyBundle(ctx, poolID, port, password)
 	}
 
 	// Parse template
@@ -107,6 +111,7 @@ func buildTemplateContext(hook HookEntry, hctx *HookContext) *TemplateContext {
 	}
 
 	if hctx != nil {
+		ctx.CaseID = hctx.CaseID
 		ctx.CaseName = hctx.CaseName
 		ctx.CasePath = hctx.CasePath
 		ctx.CaseTemplate = hctx.CaseTemplate
@@ -118,6 +123,19 @@ func buildTemplateContext(hook HookEntry, hctx *HookContext) *TemplateContext {
 
 		if hctx.CasePath != "" {
 			ctx.Vars = ParseTfvars(filepath.Join(hctx.CasePath, "terraform.tfvars"))
+		}
+		if hctx.CaseVars != "" {
+			var runtimeVars map[string]interface{}
+			if json.Unmarshal([]byte(hctx.CaseVars), &runtimeVars) == nil {
+				for key, value := range runtimeVars {
+					switch typed := value.(type) {
+					case string:
+						ctx.Vars[key] = typed
+					case float64:
+						ctx.Vars[key] = fmt.Sprintf("%v", typed)
+					}
+				}
+			}
 		}
 	}
 

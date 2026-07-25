@@ -10,6 +10,7 @@ import (
 	"red-cloud/mod/plugin"
 	"text/tabwriter"
 
+	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/spf13/cobra"
 )
 
@@ -71,15 +72,23 @@ func runAction(actionType string, caseID string) {
 
 // runStatusJSON outputs case status as JSON
 func runStatusJSON(c *redc.Case) {
-	result := map[string]interface{}{
-		"name":  c.Name,
-		"id":    c.Id,
-		"state": string(c.State),
-	}
 	state, err := redc.TfStatus(c.Path)
 	if err != nil {
 		PrintJSONError(err)
 		return
+	}
+	PrintJSON(statusJSONData(c, state))
+}
+
+func statusJSONData(c *redc.Case, state *tfjson.State) map[string]interface{} {
+	result := map[string]interface{}{
+		"name":           c.Name,
+		"id":             c.Id,
+		"state":          string(c.State),
+		"plugin_outputs": map[string]string{},
+	}
+	if outputs := plugin.LoadPluginOutputs(c.Path); outputs != nil {
+		result["plugin_outputs"] = outputs
 	}
 	if state.Values != nil {
 		outputs := map[string]interface{}{}
@@ -100,7 +109,7 @@ func runStatusJSON(c *redc.Case) {
 			result["resources"] = resources
 		}
 	}
-	PrintJSON(result)
+	return result
 }
 
 // runGlobalStatus shows a global overview: case counts by state, scheduled tasks, plugins

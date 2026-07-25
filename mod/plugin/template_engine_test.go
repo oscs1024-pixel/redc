@@ -2,7 +2,9 @@
 package plugin
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,5 +119,109 @@ func TestExecuteTemplateHook_SetOutput(t *testing.T) {
 	}
 	if results["key1"] != "value1" || results["key2"] != "value2" {
 		t.Errorf("unexpected results: %v", results)
+	}
+}
+
+func TestExecuteTemplateHookWritesPrivatePojunProxyBundle(t *testing.T) {
+	pluginDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(pluginDir, "hooks"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	tmplContent := `{{- $poolID := .Config.pool_id | default (printf "redc-%s-aliyun-proxy" .CaseID) -}}
+{{- $bundle := writePojunProxyBundle $poolID .Vars.port .Vars.password -}}
+{{- setOutput "pojun_proxy_bundle_file" (index $bundle "bundle_file") -}}
+{{- setOutput "pojun_proxy_pool_id" (index $bundle "pool_id") -}}
+{{- setOutput "pojun_proxy_node_count" (index $bundle "node_count") -}}
+{{- setOutput "pojun_proxy_revision" (index $bundle "revision") -}}`
+	tmplPath := filepath.Join(pluginDir, "hooks", "post-apply.tmpl")
+	if err := os.WriteFile(tmplPath, []byte(tmplContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	caseDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(caseDir, "terraform.tfvars"), []byte("port = \"8388\"\npassword = \"template-value\"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	outputs := map[string]interface{}{
+		"ecs_ip": map[string]interface{}{
+			"value": []interface{}{"203.0.113.10", "203.0.113.11"},
+		},
+	}
+	outputJSON, err := json.Marshal(outputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hook := HookEntry{
+		PluginName:   "redc-plugin-pojun-proxy",
+		PluginDir:    pluginDir,
+		Type:         "template",
+		TemplatePath: tmplPath,
+		Config:       map[string]interface{}{},
+	}
+	got, err := executeTemplateHook(hook, &HookContext{
+		CaseID:       "4dfaf64b-426c-40ec-84d7-456d2a43dc67",
+		CaseName:     "proxy-fixture",
+		CasePath:     caseDir,
+		CaseTemplate: "aliyun/proxy",
+		OutputJSON:   string(outputJSON),
+		CaseVars:     `{"port":"9443","password":"runtime-value"}`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bundleDir := filepath.Join(caseDir, "pojun-proxy")
+	bundlePath := filepath.Join(bundleDir, "bundle.json")
+	bundle, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded struct {
+		SchemaVersion int                      `json:"schema_version"`
+		PoolID        string                   `json:"pool_id"`
+		Revision      string                   `json:"revision"`
+		NodeCount     int                      `json:"node_count"`
+		Nodes         []map[string]interface{} `json:"nodes"`
+	}
+	if err := json.Unmarshal(bundle, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	nodesJSON, err := json.Marshal(decoded.Nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := fmt.Sprintf("%x", sha256.Sum256(nodesJSON))
+	if decoded.SchemaVersion != 1 || decoded.PoolID != "redc-4dfaf64b-426c-40ec-84d7-456d2a43dc67-aliyun-proxy" || decoded.Revision != digest {
+		t.Fatalf("bundle = %#v", decoded)
+	}
+	if decoded.NodeCount != 2 || len(decoded.Nodes) != 2 {
+		t.Fatalf("bundle = %#v", decoded)
+	}
+	if decoded.Nodes[0]["server"] != "203.0.113.10" || decoded.Nodes[0]["port"] != float64(9443) || decoded.Nodes[0]["password"] != "runtime-value" {
+		t.Fatalf("nodes = %#v", decoded.Nodes)
+	}
+	if got["pojun_proxy_bundle_file"] != bundlePath || got["pojun_proxy_revision"] != digest || got["pojun_proxy_node_count"] != "2" {
+		t.Fatalf("plugin outputs = %#v", got)
+	}
+	for _, legacyName := range []string{"manifest.json", "proxies.yaml"} {
+		if _, err := os.Stat(filepath.Join(bundleDir, legacyName)); !os.IsNotExist(err) {
+			t.Fatalf("legacy split bundle file still exists: %s", legacyName)
+		}
+	}
+	for _, item := range []struct {
+		path string
+		mode os.FileMode
+	}{
+		{bundleDir, 0700},
+		{bundlePath, 0600},
+	} {
+		info, err := os.Stat(item.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm() != item.mode {
+			t.Fatalf("%s mode = %04o, want %04o", item.path, info.Mode().Perm(), item.mode)
+		}
 	}
 }
