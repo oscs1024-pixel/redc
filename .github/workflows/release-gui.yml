@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: 1.22.1
-  NODE_VERSION: 20
+  GO_VERSION: 1.23        # 建议升级到较新版本
+  NODE_VERSION: 22        # 建议升级，Node 20 已过时
 
 permissions:
   contents: write
@@ -262,14 +262,18 @@ jobs:
           path: dist/linux-arm64
 
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
           files: |
             dist/macos/*
             dist/windows/*
             dist/linux/*
             dist/linux-arm64/*
           generate_release_notes: true
-          overwrite: true
+          overwrite_files: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GH_TOKEN }}
