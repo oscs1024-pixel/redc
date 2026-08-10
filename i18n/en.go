@@ -185,7 +185,7 @@ var enMessages = map[string]string{
 	// ============ mod/tf.go ============
 	"tf_init_terraform":       "Initializing scene \"%s\"",
 	"tf_exec_config_failed":   "TF executable config failed: %w",
-	"tf_network_error":        "Please check network connection: %w",
+	"tf_network_error":        "Please check network connection: %v",
 	"tf_init_failed":          "Initialization failed!: %v",
 	"tf_init_delete_failed":   "Failed to delete folder: %v",
 	"tf_exec_failed":          "Execution failed: %s",

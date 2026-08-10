@@ -185,7 +185,7 @@ var zhMessages = map[string]string{
 	// ============ mod/tf.go ============
 	"tf_init_terraform":       "正在初始化场景「%s」",
 	"tf_exec_config_failed":   "TF可执行配置失败: %w",
-	"tf_network_error":        "请检查网络连接: %w",
+	"tf_network_error":        "请检查网络连接: %v",
 	"tf_init_failed":          "初始化失败！: %v",
 	"tf_init_delete_failed":   "删除文件夹失败: %v",
 	"tf_exec_failed":          "执行失败: %s",
