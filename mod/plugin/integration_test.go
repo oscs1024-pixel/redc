@@ -199,13 +199,13 @@ func TestLoadManifestEnforcesMinimumRedCVersion(t *testing.T) {
 		}
 	}
 
-	writeManifest("3.3.7")
+	writeManifest("3.3.8")
 	if _, err := loadManifest(pluginDir); err != nil {
 		t.Fatalf("compatible plugin was rejected: %v", err)
 	}
 
-	writeManifest("3.3.8")
-	if _, err := loadManifest(pluginDir); err == nil || !strings.Contains(err.Error(), "requires redc 3.3.8 or newer") {
+	writeManifest("3.3.9")
+	if _, err := loadManifest(pluginDir); err == nil || !strings.Contains(err.Error(), "requires redc 3.3.9 or newer") {
 		t.Fatalf("incompatible plugin error = %v", err)
 	}
 }

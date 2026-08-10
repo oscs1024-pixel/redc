@@ -55,6 +55,9 @@ func executeTemplateHook(hook HookEntry, hctx *HookContext) (map[string]string, 
 	fm["writePojunProxyBundle"] = func(poolID, port, password string) (map[string]string, error) {
 		return writePojunProxyBundle(ctx, poolID, port, password)
 	}
+	fm["removePojunProxyBundle"] = func() (string, error) {
+		return "", removePojunProxyBundle(ctx)
+	}
 
 	// Parse template
 	tmplBytes, err := os.ReadFile(hook.TemplatePath)

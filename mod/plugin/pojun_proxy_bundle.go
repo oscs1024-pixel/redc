@@ -45,6 +45,35 @@ type pojunProxyBundleSource struct {
 	Template string `json:"template"`
 }
 
+func removePojunProxyBundle(ctx *TemplateContext) error {
+	if ctx == nil || ctx.CasePath == "" {
+		return fmt.Errorf("PoJun proxy bundle cleanup requires a case path")
+	}
+	bundleDir := filepath.Join(ctx.CasePath, "pojun-proxy")
+	info, err := os.Lstat(bundleDir)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect bundle directory: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("bundle directory must not be a symlink")
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("bundle path must be a directory")
+	}
+
+	bundlePath := filepath.Join(bundleDir, "bundle.json")
+	if err := os.Remove(bundlePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove PoJun proxy bundle: %w", err)
+	}
+	if err := syncDirectory(bundleDir); err != nil {
+		return fmt.Errorf("sync PoJun proxy bundle cleanup: %w", err)
+	}
+	return nil
+}
+
 func writePojunProxyBundle(ctx *TemplateContext, poolID, portRaw, password string) (map[string]string, error) {
 	if ctx == nil || ctx.CasePath == "" {
 		return nil, fmt.Errorf("PoJun proxy bundle requires a case path")

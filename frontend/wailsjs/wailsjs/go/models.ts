@@ -1844,11 +1844,11 @@ export namespace mod {
 	    redc_plugins: string;
 	    template: string;
 	    tags?: string[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new RedcTmpl(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -1888,11 +1888,11 @@ export namespace mod {
 	    last_scan_at?: string;
 	    last_error?: string;
 	    template_count: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TemplateSource(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1911,17 +1911,17 @@ export namespace mod {
 	export class ResolvedTemplate {
 	    Template?: RedcTmpl;
 	    Source: TemplateSource;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ResolvedTemplate(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Template = this.convertValues(source["Template"], RedcTmpl);
 	        this.Source = this.convertValues(source["Source"], TemplateSource);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1997,7 +1997,7 @@ export namespace mod {
 		}
 	}
 	
-
+	
 	export class TimelineEvent {
 	    id: number;
 	    timestamp: string;
