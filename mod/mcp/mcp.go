@@ -1265,6 +1265,9 @@ func (s *MCPServer) toolSearchTemplates(query string, registryURL string) (ToolR
 		output += fmt.Sprintf("%d. %s\n", i+1, result.Key)
 		output += fmt.Sprintf("   Version: %s\n", result.Version)
 		output += fmt.Sprintf("   Provider: %s\n", result.Provider)
+		if result.SourceType != "" {
+			output += fmt.Sprintf("   Source: %s (%s)\n", result.SourceName, result.SourceType)
+		}
 		if result.Author != "" {
 			output += fmt.Sprintf("   Author: %s\n", result.Author)
 		}

@@ -2,7 +2,7 @@
 
   import { onMount, onDestroy } from 'svelte';
   import Modal from '../UI/Modal.svelte';
-  import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme } from '../../../wailsjs/go/main/App.js';
+  import { FetchMergedTemplateRegistry, PullTemplate, ListTemplates, FetchTemplateReadme } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
   import { toast } from '../../lib/toast.js';
@@ -98,7 +98,7 @@ let { t, lang } = $props();
     registryLoading = true;
     registryError = '';
     try {
-      registryTemplates = await FetchRegistryTemplates('');
+      registryTemplates = await FetchMergedTemplateRegistry('');
     } catch (e) {
       registryError = e.message || String(e);
       registryTemplates = [];
@@ -508,6 +508,12 @@ let { t, lang } = $props();
                   <h3 class="text-[13px] font-semibold text-gray-900 truncate">{tmpl.name}</h3>
                   <div class="flex items-center gap-1.5 mt-0.5">
                     <p class="text-[11px] text-gray-400">v{tmpl.latest}</p>
+                    {#if tmpl.sourceType === 'local'}
+                      <span class="px-1.5 py-0 text-[9px] font-medium rounded bg-emerald-50 text-emerald-700" title={tmpl.sourceName}>{tmpl.sourceName || (t.localSource || '本地源')}</span>
+                    {/if}
+                    {#if tmpl.conflictCount > 0}
+                      <span class="px-1.5 py-0 text-[9px] font-medium rounded bg-amber-50 text-amber-700" title={(tmpl.conflictSources || []).join(', ')}>{t.overridesSources || '覆盖来源'} {tmpl.conflictCount}</span>
+                    {/if}
                     {#each scenarioLabels(tmpl.tags) as st}
                       <span class="px-1.5 py-0 text-[9px] font-medium rounded {st.color}">{st.label}</span>
                     {/each}

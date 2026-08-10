@@ -18,6 +18,8 @@ export function AIRecommendTemplates(arg1:string):Promise<void>;
 
 export function AddHTTPServerUser(arg1:string,arg2:string):Promise<mod.HTTPUser>;
 
+export function AddLocalTemplateSource(arg1:string,arg2:string):Promise<mod.TemplateSource>;
+
 export function AgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
 
 export function AnalyzeCaseError(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
@@ -127,6 +129,8 @@ export function ExportTemplates(arg1:Array<string>):Promise<string>;
 export function FetchCaseReadme(arg1:string,arg2:string):Promise<string>;
 
 export function FetchCaseReadmeInfo(arg1:string,arg2:string):Promise<main.CaseReadmeInfo>;
+
+export function FetchMergedTemplateRegistry(arg1:string):Promise<Array<main.RegistryTemplate>>;
 
 export function FetchPluginRegistry():Promise<Array<plugin.RegistryPlugin>>;
 
@@ -262,6 +266,8 @@ export function InstallPlugin(arg1:string):Promise<void>;
 
 export function InstallSkill(arg1:string,arg2:string):Promise<void>;
 
+export function InstallTemplateFromSource(arg1:string,arg2:boolean):Promise<string>;
+
 export function ListAllScheduledTasks():Promise<Array<mod.ScheduledTask>>;
 
 export function ListAllTemplates():Promise<Array<main.TemplateInfo>>;
@@ -289,6 +295,8 @@ export function ListRemoteFiles(arg1:string,arg2:string):Promise<Array<sshutil.F
 export function ListScheduledTasks():Promise<Array<mod.ScheduledTask>>;
 
 export function ListSkills(arg1:string):Promise<Array<ai.SkillIndex>>;
+
+export function ListTemplateSources():Promise<Array<mod.TemplateSource>>;
 
 export function ListTemplates():Promise<Array<main.TemplateInfo>>;
 
@@ -368,6 +376,8 @@ export function RemoveHTTPServerUser(arg1:string):Promise<void>;
 
 export function RemoveTemplate(arg1:string):Promise<void>;
 
+export function RemoveTemplateSource(arg1:string):Promise<void>;
+
 export function RenameRemoteFile(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
@@ -387,6 +397,8 @@ export function SaveProxyConfig(arg1:string,arg2:string,arg3:string,arg4:string)
 export function SaveTemplateFiles(arg1:string,arg2:Record<string, string>):Promise<string>;
 
 export function SaveTerraformMirrorConfig(arg1:boolean,arg2:Array<string>,arg3:string,arg4:boolean):Promise<void>;
+
+export function ScanTemplateSource(arg1:string):Promise<Array<mod.ResolvedTemplate>>;
 
 export function ScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time):Promise<mod.ScheduledTask>;
 
@@ -481,6 +493,8 @@ export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:s
 export function UpdateProfileFallbackProviders(arg1:string,arg2:Array<mod.FallbackProvider>):Promise<void>;
 
 export function UpdateSkill(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function UpdateTemplateSource(arg1:mod.TemplateSource):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 

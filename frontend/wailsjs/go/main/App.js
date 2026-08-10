@@ -214,6 +214,34 @@ export function FetchRegistryTemplates(arg1) {
   return window['go']['main']['App']['FetchRegistryTemplates'](arg1);
 }
 
+export function FetchMergedTemplateRegistry(arg1) {
+  return window['go']['main']['App']['FetchMergedTemplateRegistry'](arg1);
+}
+
+export function ListTemplateSources() {
+  return window['go']['main']['App']['ListTemplateSources']();
+}
+
+export function AddLocalTemplateSource(arg1, arg2) {
+  return window['go']['main']['App']['AddLocalTemplateSource'](arg1, arg2);
+}
+
+export function UpdateTemplateSource(arg1) {
+  return window['go']['main']['App']['UpdateTemplateSource'](arg1);
+}
+
+export function RemoveTemplateSource(arg1) {
+  return window['go']['main']['App']['RemoveTemplateSource'](arg1);
+}
+
+export function ScanTemplateSource(arg1) {
+  return window['go']['main']['App']['ScanTemplateSource'](arg1);
+}
+
+export function InstallTemplateFromSource(arg1, arg2) {
+  return window['go']['main']['App']['InstallTemplateFromSource'](arg1, arg2);
+}
+
 export function FetchSkillsRegistry() {
   return window['go']['main']['App']['FetchSkillsRegistry']();
 }

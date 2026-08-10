@@ -22,6 +22,10 @@ export function AddHTTPServerUser(arg1, arg2) {
   return window['go']['main']['App']['AddHTTPServerUser'](arg1, arg2);
 }
 
+export function AddLocalTemplateSource(arg1, arg2) {
+  return window['go']['main']['App']['AddLocalTemplateSource'](arg1, arg2);
+}
+
 export function AgentChatStream(arg1, arg2) {
   return window['go']['main']['App']['AgentChatStream'](arg1, arg2);
 }
@@ -240,6 +244,10 @@ export function FetchCaseReadme(arg1, arg2) {
 
 export function FetchCaseReadmeInfo(arg1, arg2) {
   return window['go']['main']['App']['FetchCaseReadmeInfo'](arg1, arg2);
+}
+
+export function FetchMergedTemplateRegistry(arg1) {
+  return window['go']['main']['App']['FetchMergedTemplateRegistry'](arg1);
 }
 
 export function FetchPluginRegistry() {
@@ -510,6 +518,10 @@ export function InstallSkill(arg1, arg2) {
   return window['go']['main']['App']['InstallSkill'](arg1, arg2);
 }
 
+export function InstallTemplateFromSource(arg1, arg2) {
+  return window['go']['main']['App']['InstallTemplateFromSource'](arg1, arg2);
+}
+
 export function ListAllScheduledTasks() {
   return window['go']['main']['App']['ListAllScheduledTasks']();
 }
@@ -564,6 +576,10 @@ export function ListScheduledTasks() {
 
 export function ListSkills(arg1) {
   return window['go']['main']['App']['ListSkills'](arg1);
+}
+
+export function ListTemplateSources() {
+  return window['go']['main']['App']['ListTemplateSources']();
 }
 
 export function ListTemplates() {
@@ -722,6 +738,10 @@ export function RemoveTemplate(arg1) {
   return window['go']['main']['App']['RemoveTemplate'](arg1);
 }
 
+export function RemoveTemplateSource(arg1) {
+  return window['go']['main']['App']['RemoveTemplateSource'](arg1);
+}
+
 export function RenameRemoteFile(arg1, arg2, arg3) {
   return window['go']['main']['App']['RenameRemoteFile'](arg1, arg2, arg3);
 }
@@ -760,6 +780,10 @@ export function SaveTemplateFiles(arg1, arg2) {
 
 export function SaveTerraformMirrorConfig(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveTerraformMirrorConfig'](arg1, arg2, arg3, arg4);
+}
+
+export function ScanTemplateSource(arg1) {
+  return window['go']['main']['App']['ScanTemplateSource'](arg1);
 }
 
 export function ScheduleTask(arg1, arg2, arg3, arg4) {
@@ -948,6 +972,10 @@ export function UpdateProfileFallbackProviders(arg1, arg2) {
 
 export function UpdateSkill(arg1, arg2, arg3) {
   return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3);
+}
+
+export function UpdateTemplateSource(arg1) {
+  return window['go']['main']['App']['UpdateTemplateSource'](arg1);
 }
 
 export function UploadFile(arg1, arg2, arg3) {

@@ -321,7 +321,14 @@ func (a *App) GetActiveProfile() (redc.ProfileInfo, error) {
 }
 
 func (a *App) SetActiveProfile(profileID string) (redc.ProfileInfo, error) {
-	return redc.SetActiveProfile(profileID)
+	profile, err := redc.SetActiveProfile(profileID)
+	if err != nil {
+		return redc.ProfileInfo{}, err
+	}
+	a.mu.Lock()
+	a.templateSources = nil
+	a.mu.Unlock()
+	return profile, nil
 }
 
 func (a *App) CreateProfile(name string, configPath string, templateDir string) (redc.ProfileInfo, error) {
