@@ -406,6 +406,11 @@ export namespace main {
 	    tags: string[];
 	    installed: boolean;
 	    localVersion: string;
+	    sourceType?: string;
+	    sourceId?: string;
+	    sourceName?: string;
+	    conflictCount?: number;
+	    conflictSources?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new RegistryTemplate(source);
@@ -422,6 +427,11 @@ export namespace main {
 	        this.tags = source["tags"];
 	        this.installed = source["installed"];
 	        this.localVersion = source["localVersion"];
+	        this.sourceType = source["sourceType"];
+	        this.sourceId = source["sourceId"];
+	        this.sourceName = source["sourceName"];
+	        this.conflictCount = source["conflictCount"];
+	        this.conflictSources = source["conflictSources"];
 	    }
 	}
 	export class ResourceSummary {
@@ -1158,4 +1168,3 @@ export namespace time {
 	}
 
 }
-

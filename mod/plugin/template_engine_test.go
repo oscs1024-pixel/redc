@@ -225,3 +225,48 @@ func TestExecuteTemplateHookWritesPrivatePojunProxyBundle(t *testing.T) {
 		}
 	}
 }
+
+func TestExecuteTemplateHookRevokesPojunProxyBundleAfterDestroy(t *testing.T) {
+	pluginDir := t.TempDir()
+	hooksDir := filepath.Join(pluginDir, "hooks")
+	if err := os.MkdirAll(hooksDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	tmplPath := filepath.Join(hooksDir, "post-destroy.tmpl")
+	tmplContent := `{{- removePojunProxyBundle -}}
+{{- setOutput "pojun_proxy_bundle_file" "" -}}
+{{- setOutput "pojun_proxy_node_count" "0" -}}
+{{- setOutput "pojun_proxy_revision" "" -}}`
+	if err := os.WriteFile(tmplPath, []byte(tmplContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	caseDir := t.TempDir()
+	ctx := &TemplateContext{
+		CaseID:       "destroy-fixture",
+		CasePath:     caseDir,
+		CaseTemplate: "aliyun/proxy",
+		IPs:          []string{"203.0.113.40"},
+	}
+	if _, err := writePojunProxyBundle(ctx, "redc-destroy-fixture-aliyun-proxy", "8388", "fixture-value"); err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(caseDir, "pojun-proxy", "bundle.json")
+
+	got, err := executeTemplateHook(HookEntry{
+		PluginName:   "redc-plugin-pojun-proxy",
+		PluginDir:    pluginDir,
+		Type:         "template",
+		TemplatePath: tmplPath,
+	}, &HookContext{CaseID: "destroy-fixture", CasePath: caseDir})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Lstat(bundlePath); !os.IsNotExist(err) {
+		t.Fatalf("post-destroy retained proxy credentials: %v", err)
+	}
+	if got["pojun_proxy_bundle_file"] != "" || got["pojun_proxy_node_count"] != "0" || got["pojun_proxy_revision"] != "" {
+		t.Fatalf("post-destroy outputs = %#v", got)
+	}
+}

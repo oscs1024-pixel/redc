@@ -36,6 +36,7 @@ type App struct {
 	spotMonitor             *SpotMonitor
 	customDeploymentService *redc.CustomDeploymentService
 	templateManager         *redc.TemplateManager
+	templateSources         *redc.TemplateSourceManager
 	configStore             *redc.ConfigStore
 	pluginMgr               *plugin.PluginManager
 	auditStore              *redc.AuditStore
@@ -555,6 +556,11 @@ type RegistryTemplate struct {
 	Tags          []string `json:"tags"`
 	Installed     bool     `json:"installed"`
 	LocalVer      string   `json:"localVersion"`
+	SourceType    string   `json:"sourceType,omitempty"`
+	SourceID      string   `json:"sourceId,omitempty"`
+	SourceName    string   `json:"sourceName,omitempty"`
+	ConflictCount int      `json:"conflictCount,omitempty"`
+	ConflictSources []string `json:"conflictSources,omitempty"`
 }
 
 // remoteTemplateInfo matches a single template in the registry

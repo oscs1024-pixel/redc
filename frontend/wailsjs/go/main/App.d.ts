@@ -109,6 +109,20 @@ export function FetchPluginRegistry():Promise<Array<plugin.RegistryPlugin>>;
 
 export function FetchRegistryTemplates(arg1:string):Promise<Array<main.RegistryTemplate>>;
 
+export function FetchMergedTemplateRegistry(arg1:string):Promise<Array<main.RegistryTemplate>>;
+
+export function ListTemplateSources():Promise<Array<any>>;
+
+export function AddLocalTemplateSource(arg1:string,arg2:string):Promise<any>;
+
+export function UpdateTemplateSource(arg1:any):Promise<void>;
+
+export function RemoveTemplateSource(arg1:string):Promise<void>;
+
+export function ScanTemplateSource(arg1:string):Promise<Array<any>>;
+
+export function InstallTemplateFromSource(arg1:string,arg2:boolean):Promise<string>;
+
 export function FetchSkillsRegistry():Promise<Array<ai.RegistrySkill>>;
 
 export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;

@@ -76,12 +76,15 @@ type RemoteIndex struct {
 
 // TemplateItem 对应 templates 下的具体项
 type TemplateItem struct {
-	ID       string                     `json:"id"`       // e.g. "aliyun/ecs"
-	Provider string                     `json:"provider"` // e.g. "aliyun"
-	Slug     string                     `json:"slug"`     // e.g. "ecs"
-	Latest   string                     `json:"latest"`   // e.g. "1.0.1"
-	Versions map[string]TemplateVersion `json:"versions"`
-	Metadata TemplateMetadata           `json:"metadata"`
+	ID         string                     `json:"id"`       // e.g. "aliyun/ecs"
+	Provider   string                     `json:"provider"` // e.g. "aliyun"
+	Slug       string                     `json:"slug"`     // e.g. "ecs"
+	Latest     string                     `json:"latest"`   // e.g. "1.0.1"
+	Versions   map[string]TemplateVersion `json:"versions"`
+	Metadata   TemplateMetadata           `json:"metadata"`
+	SourceType string                     `json:"-"`
+	SourceID   string                     `json:"-"`
+	SourceName string                     `json:"-"`
 }
 
 // TemplateMetadata 元数据信息
@@ -109,6 +112,9 @@ type SearchResult struct {
 	Author      string
 	Provider    string
 	Score       int
+	SourceType  string
+	SourceID    string
+	SourceName  string
 }
 
 // =============================================================================
@@ -198,6 +204,9 @@ func SearchFromIndex(idx *RemoteIndex, query string) []SearchResult {
 				Author:      tmpl.Metadata.Author,
 				Provider:    tmpl.Provider,
 				Score:       score,
+				SourceType:  tmpl.SourceType,
+				SourceID:    tmpl.SourceID,
+				SourceName:  tmpl.SourceName,
 			})
 		}
 	}
@@ -221,13 +230,60 @@ func SearchFromIndex(idx *RemoteIndex, query string) []SearchResult {
 
 // Search 对外暴露的完整搜索接口 (网络 + 计算)
 func Search(ctx context.Context, query string, opts PullOptions) ([]SearchResult, error) {
-	// 1. 获取远程索引
-	idx, err := GetRemoteIndex(ctx, opts.RegistryURL)
-	if err != nil {
-		return nil, err
+	manager, managerErr := LoadConfiguredTemplateSourceManager()
+	if managerErr != nil && RedcPath != "" {
+		return nil, managerErr
 	}
-	// 2. 内存搜索
+
+	idx, remoteErr := GetRemoteIndex(ctx, opts.RegistryURL)
+	if remoteErr != nil {
+		idx = &RemoteIndex{Templates: make(map[string]TemplateItem)}
+	}
+	if managerErr == nil {
+		if localTemplates, localErr := manager.ListMergedTemplates(); localErr != nil {
+			return nil, localErr
+		} else {
+			mergeLocalTemplatesIntoIndex(idx, localTemplates)
+		}
+	}
+	if remoteErr != nil && len(idx.Templates) == 0 {
+		return nil, remoteErr
+	}
 	return SearchFromIndex(idx, query), nil
+}
+
+func mergeLocalTemplatesIntoIndex(idx *RemoteIndex, templates []ResolvedTemplate) {
+	if idx.Templates == nil {
+		idx.Templates = make(map[string]TemplateItem)
+	}
+	for _, resolved := range templates {
+		name := resolved.Template.Name
+		if _, officialExists := idx.Templates[name]; officialExists && resolved.Source.Priority < 0 {
+			continue
+		}
+		provider, slug := name, name
+		if parts := strings.SplitN(name, "/", 2); len(parts) == 2 {
+			provider, slug = parts[0], parts[1]
+		}
+		version := resolved.Template.Version
+		idx.Templates[name] = TemplateItem{
+			ID:       name,
+			Provider: provider,
+			Slug:     slug,
+			Latest:   version,
+			Versions: map[string]TemplateVersion{version: {}},
+			Metadata: TemplateMetadata{
+				Name:          resolved.Template.Name,
+				Author:        resolved.Template.User,
+				Description:   resolved.Template.Description,
+				DescriptionEN: resolved.Template.DescriptionEN,
+				Tags:          resolved.Template.Tags,
+			},
+			SourceType: string(resolved.Source.Type),
+			SourceID:   resolved.Source.ID,
+			SourceName: resolved.Source.Name,
+		}
+	}
 }
 
 // =============================================================================
@@ -242,6 +298,29 @@ func Pull(ctx context.Context, imageRef string, opts PullOptions) error {
 	imageName, tag, found := strings.Cut(imageRef, ":")
 	if !found || tag == "" {
 		tag = "latest"
+	}
+
+	// Resolve configured local sources before contacting the remote registry.
+	manager, managerErr := LoadConfiguredTemplateSourceManager()
+	if managerErr != nil && RedcPath != "" {
+		return managerErr
+	}
+	if managerErr == nil {
+		resolved, resolveErr := manager.resolveTemplateForInstall(imageName)
+		if resolveErr != nil {
+			if _, installed := manager.ListInstallations()[imageName]; installed {
+				return resolveErr
+			}
+		} else if resolved.Source.Priority >= 0 &&
+			(tag == "latest" || tag == resolved.Template.Version) {
+			exists, localVer, _ := CheckLocalImage(imageName)
+			if exists && !opts.Force && localVer == resolved.Template.Version {
+				gologger.Info().Msgf("✅ %s:%s is already up to date.", imageName, localVer)
+				return nil
+			}
+			_, installErr := manager.InstallTemplate(imageName, opts.Force || exists)
+			return installErr
+		}
 	}
 
 	// 2. 检查本地

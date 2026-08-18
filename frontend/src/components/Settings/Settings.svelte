@@ -1,5 +1,7 @@
 <script>
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook } from '../../../wailsjs/go/main/App.js';
+  import { onMount } from 'svelte';
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook, ListTemplateSources, AddLocalTemplateSource, UpdateTemplateSource, RemoveTemplateSource, ScanTemplateSource } from '../../../wailsjs/go/main/App.js';
+  import { selectDirectory } from '../../lib/file-dialog.js';
   import PageGuide from '../UI/PageGuide.svelte';
   import HelpTooltip from '../UI/HelpTooltip.svelte';
 
@@ -24,6 +26,11 @@
   let webhookMessageType = $state('');
   let webhookTesting = $state({ slack: false, dingtalk: false, feishu: false, discord: false, wecom: false });
   let webhookLoaded = $state(false);
+  let templateSources = $state([]);
+  let templateSourceForm = $state({ name: '', path: '' });
+  let templateSourceBusy = $state(false);
+  let templateSourceError = $state('');
+  let templateSourceEdit = $state(null);
   
   // Initialize forms when props change
   $effect(() => {
@@ -283,7 +290,108 @@
     }
   }
 
+  async function loadTemplateSources() {
+    try {
+      templateSources = await ListTemplateSources() || [];
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    }
+  }
+
+  async function chooseTemplateSourceDirectory() {
+    templateSourceError = '';
+    try {
+      const path = await selectDirectory(t.templateSourceSelect || '选择模板目录');
+      if (path) templateSourceForm.path = path;
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    }
+  }
+
+  async function addTemplateSource() {
+    if (!templateSourceForm.name.trim() || !templateSourceForm.path.trim()) return;
+    templateSourceBusy = true;
+    templateSourceError = '';
+    try {
+      await AddLocalTemplateSource(templateSourceForm.name.trim(), templateSourceForm.path.trim());
+      templateSourceForm = { name: '', path: '' };
+      await loadTemplateSources();
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    } finally {
+      templateSourceBusy = false;
+    }
+  }
+
+  async function toggleTemplateSource(source) {
+    templateSourceError = '';
+    try {
+      await UpdateTemplateSource({ ...source, enabled: !source.enabled });
+      await loadTemplateSources();
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    }
+  }
+
+  async function scanTemplateSource(source) {
+    templateSourceError = '';
+    try {
+      await ScanTemplateSource(source.id);
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    } finally {
+      await loadTemplateSources();
+    }
+  }
+
+  async function removeTemplateSource(source) {
+    templateSourceError = '';
+    try {
+      await RemoveTemplateSource(source.id);
+      await loadTemplateSources();
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    }
+  }
+
+  function startTemplateSourceEdit(source) {
+    templateSourceEdit = { ...source, priority: Number(source.priority || 0) };
+    templateSourceError = '';
+  }
+
+  async function chooseTemplateSourceEditDirectory() {
+    if (!templateSourceEdit) return;
+    templateSourceError = '';
+    try {
+      const path = await selectDirectory(t.templateSourceSelect || '选择模板目录');
+      if (path) templateSourceEdit = { ...templateSourceEdit, path };
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    }
+  }
+
+  async function saveTemplateSourceEdit() {
+    if (!templateSourceEdit?.name?.trim() || !templateSourceEdit?.path?.trim()) return;
+    templateSourceBusy = true;
+    templateSourceError = '';
+    try {
+      await UpdateTemplateSource({
+        ...templateSourceEdit,
+        name: templateSourceEdit.name.trim(),
+        path: templateSourceEdit.path.trim(),
+        priority: Number(templateSourceEdit.priority || 0)
+      });
+      templateSourceEdit = null;
+      await loadTemplateSources();
+    } catch (e) {
+      templateSourceError = e.message || String(e);
+    } finally {
+      templateSourceBusy = false;
+    }
+  }
+
   $effect(() => { loadWebhookConfig(); });
+  onMount(loadTemplateSources);
 </script>
 
 <div class="space-y-4">
@@ -387,6 +495,103 @@
           </button>
         </div>
         {/if}
+      </div>
+    </div>
+
+    <!-- 本地模板源 -->
+    <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-emerald-50 flex items-center justify-center">
+            <svg class="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75a3 3 0 013-3h3.879a3 3 0 012.121.879l.621.621a3 3 0 002.122.879h2.757a3 3 0 013 3v8.121a3 3 0 01-3 3H6.75a3 3 0 01-3-3V6.75z" /></svg>
+          </div>
+          <div>
+            <h3 class="text-[13px] font-semibold text-gray-900">{t.templateSources || '本地模板源'}</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5">{t.templateSourcesDesc || '从本机目录加载私有模板；同名模板优先于官方源。'}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-b border-gray-100 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-[minmax(120px,0.35fr)_1fr_auto] gap-2">
+          <input
+            aria-label={t.templateSourceName || '来源名称'}
+            class="h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900"
+            placeholder={t.templateSourceName || '来源名称'}
+            bind:value={templateSourceForm.name}
+          />
+          <button
+            class="h-9 px-3 text-left text-[12px] font-mono bg-gray-50 rounded-lg text-gray-600 hover:bg-gray-100 truncate cursor-pointer"
+            onclick={chooseTemplateSourceDirectory}
+            title={templateSourceForm.path || (t.templateSourceSelect || '选择模板目录')}
+          >{templateSourceForm.path || (t.templateSourceSelect || '选择模板目录')}</button>
+          <button
+            class="h-9 px-4 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-40 cursor-pointer"
+            onclick={addTemplateSource}
+            disabled={templateSourceBusy || !templateSourceForm.name.trim() || !templateSourceForm.path.trim()}
+          >{t.add || '添加'}</button>
+        </div>
+        {#if templateSourceError}
+          <p class="text-[11px] text-red-600 break-all">{templateSourceError}</p>
+        {/if}
+      </div>
+
+      <div class="divide-y divide-gray-50">
+        {#each templateSources as source}
+          <div class="px-5 py-3 flex items-center gap-3">
+            <button
+              class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+              class:bg-emerald-500={source.enabled}
+              class:bg-gray-300={!source.enabled}
+              onclick={() => toggleTemplateSource(source)}
+              title={source.enabled ? (t.disable || '禁用') : (t.enable || '启用')}
+            >
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" class:translate-x-6={source.enabled} class:translate-x-1={!source.enabled}></span>
+            </button>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[12px] font-medium text-gray-900">{source.name}</span>
+                <span class="text-[10px] text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{source.template_count || 0} {t.templates || '模板'}</span>
+                {#if source.last_error}
+                  <span class="text-[10px] text-red-600 bg-red-50 rounded px-1.5 py-0.5">{t.unavailable || '不可用'}</span>
+                {/if}
+              </div>
+              <div class="text-[10px] text-gray-500 font-mono truncate mt-0.5" title={source.path}>{source.path}</div>
+              {#if source.last_error}
+                <div class="text-[10px] text-red-500 truncate mt-0.5" title={source.last_error}>{source.last_error}</div>
+              {/if}
+            </div>
+            <button class="h-7 px-2.5 text-[11px] text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 cursor-pointer" onclick={() => scanTemplateSource(source)}>{t.rescan || '重扫'}</button>
+            <button class="h-7 px-2.5 text-[11px] text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 cursor-pointer" onclick={() => startTemplateSourceEdit(source)}>{t.edit || '编辑'}</button>
+            <button class="h-7 w-7 inline-flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md cursor-pointer" onclick={() => removeTemplateSource(source)} title={t.remove || '移除'} aria-label={t.remove || '移除'}>
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          {#if templateSourceEdit?.id === source.id}
+            <div class="px-5 pb-3 grid grid-cols-1 sm:grid-cols-[minmax(120px,0.35fr)_1fr_100px_auto_auto] gap-2">
+              <input
+                aria-label={t.templateSourceName || '来源名称'}
+                class="h-8 px-2.5 text-[11px] bg-gray-50 border-0 rounded-md text-gray-900 focus:ring-2 focus:ring-gray-900"
+                bind:value={templateSourceEdit.name}
+              />
+              <button
+                class="h-8 px-2.5 text-left text-[11px] font-mono bg-gray-50 rounded-md text-gray-600 hover:bg-gray-100 truncate cursor-pointer"
+                onclick={chooseTemplateSourceEditDirectory}
+                title={templateSourceEdit.path}
+              >{templateSourceEdit.path}</button>
+              <input
+                aria-label={t.priority || '优先级'}
+                type="number"
+                class="h-8 px-2.5 text-[11px] bg-gray-50 border-0 rounded-md text-gray-900 focus:ring-2 focus:ring-gray-900"
+                bind:value={templateSourceEdit.priority}
+              />
+              <button class="h-8 px-3 text-[11px] text-white bg-gray-900 rounded-md hover:bg-gray-800 disabled:opacity-40 cursor-pointer" onclick={saveTemplateSourceEdit} disabled={templateSourceBusy}>{t.save || '保存'}</button>
+              <button class="h-8 px-3 text-[11px] text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 cursor-pointer" onclick={() => templateSourceEdit = null}>{t.cancel || '取消'}</button>
+            </div>
+          {/if}
+        {:else}
+          <div class="px-5 py-4 text-[11px] text-gray-500">{t.noTemplateSources || '尚未配置本地模板源'}</div>
+        {/each}
       </div>
     </div>
 

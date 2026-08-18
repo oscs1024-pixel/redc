@@ -288,7 +288,8 @@ func (c *Client) chatWithToolsStreamAnthropic(ctx context.Context, messages []Me
 	var systemMsg string
 	var anthropicMsgs []interface{}
 
-	for _, msg := range messages {
+	for i := 0; i < len(messages); i++ {
+		msg := messages[i]
 		if msg.Role == "system" {
 			systemMsg = msg.Content
 			continue
@@ -323,16 +324,22 @@ func (c *Client) chatWithToolsStreamAnthropic(ctx context.Context, messages []Me
 		}
 
 		if msg.Role == "tool" {
-			// Tool result → user message with tool_result content block
+			// Anthropic requires every result for a tool-use turn in the immediately
+			// following user message, so group consecutive OpenAI-format tool messages.
+			var content []interface{}
+			for i < len(messages) && messages[i].Role == "tool" {
+				toolMsg := messages[i]
+				content = append(content, map[string]interface{}{
+					"type":        "tool_result",
+					"tool_use_id": toolMsg.ToolCallID,
+					"content":     toolMsg.Content,
+				})
+				i++
+			}
+			i--
 			anthropicMsgs = append(anthropicMsgs, map[string]interface{}{
-				"role": "user",
-				"content": []interface{}{
-					map[string]interface{}{
-						"type":       "tool_result",
-						"tool_use_id": msg.ToolCallID,
-						"content":    msg.Content,
-					},
-				},
+				"role":    "user",
+				"content": content,
 			})
 			continue
 		}

@@ -69,6 +69,13 @@ func (a *App) GetTemplatesDir() string {
 
 func (a *App) GetTemplateVariables(templateName string) ([]TemplateVariable, error) {
 	templatePath := filepath.Join(redc.TemplateDir, templateName)
+	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		if manager, managerErr := a.templateSourceManager(); managerErr == nil {
+			if resolved, resolveErr := manager.ResolveTemplate(templateName); resolveErr == nil {
+				templatePath = resolved.Template.Path
+			}
+		}
+	}
 
 	// Parse variables.tf to get variable definitions
 	variablesFile := filepath.Join(templatePath, "variables.tf")
@@ -305,12 +312,12 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 			Description:   t.Metadata.Description,
 			DescriptionEN: t.Metadata.DescriptionEN,
 			Author:        t.Metadata.Author,
-			Latest:      t.Latest,
-			Versions:    versions,
-			UpdatedAt:   updatedAt,
-			Tags:        tags,
-			Installed:   installed,
-			LocalVer:    localVer,
+			Latest:        t.Latest,
+			Versions:      versions,
+			UpdatedAt:     updatedAt,
+			Tags:          tags,
+			Installed:     installed,
+			LocalVer:      localVer,
 		})
 	}
 
@@ -322,6 +329,13 @@ func (a *App) FetchTemplateReadme(templateName string, lang string) (string, err
 	templateDir := filepath.Join(redc.TemplateDir, templateName)
 	if content, err := loadLocalReadme(templateDir, []string{templateDir}, lang); err == nil {
 		return content, nil
+	}
+	if manager, err := a.templateSourceManager(); err == nil {
+		if resolved, resolveErr := manager.ResolveTemplate(templateName); resolveErr == nil {
+			if content, readErr := loadLocalReadme(resolved.Template.Path, []string{resolved.Template.Path}, lang); readErr == nil {
+				return content, nil
+			}
+		}
 	}
 
 	return fetchRemoteTemplateReadme(templateName, lang)
@@ -547,6 +561,21 @@ func (a *App) RemoveTemplate(templateName string) error {
 
 func (a *App) PullTemplate(templateName string, force bool) error {
 	a.emitLog(i18n.Tf("app_pulling_template", templateName))
+	if manager, err := a.templateSourceManager(); err == nil {
+		if templates, err := manager.ListMergedTemplates(); err == nil {
+			for _, template := range templates {
+				if template.Template.Name != templateName || template.Source.Priority < 0 {
+					continue
+				}
+				if _, err := manager.InstallTemplate(templateName, force); err != nil {
+					return err
+				}
+				a.emitLog(i18n.Tf("app_template_pulled", templateName))
+				a.emitRefresh()
+				return nil
+			}
+		}
+	}
 
 	go func() {
 		defer func() {
@@ -1070,7 +1099,7 @@ services:
   #     uptime
 `
 		return map[string]string{
-			"case.json":          composeCaseJSON,
+			"case.json":         composeCaseJSON,
 			"redc-compose.yaml": composeYAML,
 		}
 	default: // backward compat — treat as preset
@@ -1110,9 +1139,9 @@ func (a *App) DeleteTemplateFile(templateName string, fileName string) error {
 
 // TemplateValidateResult holds the result of a terraform validate run
 type TemplateValidateResult struct {
-	Valid        bool                       `json:"valid"`
-	ErrorCount   int                        `json:"error_count"`
-	WarningCount int                        `json:"warning_count"`
+	Valid        bool                         `json:"valid"`
+	ErrorCount   int                          `json:"error_count"`
+	WarningCount int                          `json:"warning_count"`
 	Diagnostics  []TemplateValidateDiagnostic `json:"diagnostics"`
 }
 
